@@ -1,0 +1,1322 @@
+# Skill: Personalized Music Discovery
+
+## 1. Objetivo
+
+Esta Skill define a metodologia, arquitetura conceitual, regras de produto e decisões de UX para um aplicativo web de **descoberta musical personalizada**.
+
+O produto é inspirado conceitualmente em experiências como:
+
+- Discovr Music
+- Nokia MixRadio
+- Music-Map
+- sistemas modernos de recomendação musical
+
+Mas o objetivo **não é reproduzir nenhum desses produtos**.
+
+O objetivo é criar uma experiência própria em que o usuário:
+
+1. informa alguns artistas/bandas que já conhece ou gosta;
+2. o sistema constrói automaticamente um perfil musical;
+3. combina dados musicais externos com o comportamento do usuário;
+4. encontra artistas que o usuário provavelmente ainda não conhece;
+5. apresenta essas descobertas de maneira visual e intuitiva;
+6. aprende continuamente com as escolhas do usuário.
+
+---
+
+# 2. Princípio fundamental do produto
+
+O sistema não deve perguntar ao usuário:
+
+> "Que tipo de música você gosta?"
+
+Nem deve transformar a experiência em uma conversa/questionário.
+
+O princípio é:
+
+> **O usuário demonstra seu gosto através de escolhas; o sistema aprende a partir delas.**
+
+A entrada principal do usuário será:
+
+- pesquisar artistas;
+- adicionar artistas ao próprio perfil;
+- explorar artistas;
+- gostar;
+- não gostar;
+- marcar como conhecido;
+- descobrir;
+- aplicar filtros.
+
+O sistema deve fazer o trabalho pesado de interpretação.
+
+---
+
+# 3. Experiência principal
+
+Fluxo inicial:
+
+```text
+Usuário entra no site
+        ↓
+Pesquisa um artista
+        ↓
+Adiciona ao seu perfil
+        ↓
+Pesquisa mais 2–10 artistas
+        ↓
+Sistema constrói Musical Profile
+        ↓
+Discovery Engine
+        ↓
+Lista / mapa de descobertas
+        ↓
+Usuário explora
+        ↓
+Feedback do usuário
+        ↓
+Perfil é atualizado
+        ↓
+Novas descobertas
+```
+
+O usuário deve conseguir começar com **pouquíssima informação**.
+
+Três artistas bem escolhidos já devem ser suficientes para produzir uma primeira experiência de descoberta.
+
+---
+
+# 4. Experiência sem login obrigatório
+
+O usuário **não deve ser obrigado a criar uma conta para experimentar o produto**.
+
+Fluxo:
+
+```text
+Entrar no site
+    ↓
+Pesquisar artistas
+    ↓
+Adicionar artistas
+    ↓
+Explorar descobertas
+```
+
+Enquanto o usuário não estiver autenticado, o perfil pode existir temporariamente no navegador.
+
+Exemplo:
+
+```text
+Temporary Profile
+
+Radiohead
+Portishead
+Björk
+```
+
+Quando o usuário quiser preservar o trabalho:
+
+```text
+Save my music profile
+```
+
+Nesse momento é solicitado o login.
+
+Isso reduz drasticamente a fricção inicial.
+
+---
+
+# 5. Autenticação aprovada
+
+A autenticação será baseada em:
+
+**Supabase Auth**
+
+Métodos aprovados:
+
+- Google
+- Apple
+- Magic Link por e-mail
+
+Não utilizar senha tradicional inicialmente.
+
+Fluxo:
+
+```text
+Save my profile
+       ↓
+┌──────────────────────┐
+│ Continue with Google │
+│ Continue with Apple  │
+│                      │
+│ Email                │
+└──────────────────────┘
+```
+
+No caso de e-mail:
+
+```text
+Digite seu e-mail
+       ↓
+Recebe Magic Link
+       ↓
+Clica no link
+       ↓
+Usuário autenticado
+```
+
+A autenticação é responsabilidade do Supabase Auth.
+
+O aplicativo não deve implementar seu próprio sistema de senhas.
+
+---
+
+# 6. Separação entre autenticação e perfil musical
+
+A identidade do usuário e o perfil musical são conceitos diferentes.
+
+## Supabase Auth
+
+Responsável por:
+
+- identidade;
+- e-mail;
+- provedor de autenticação;
+- sessão;
+- tokens;
+- recuperação/autenticação.
+
+## Banco da aplicação
+
+Responsável por:
+
+- perfil musical;
+- artistas favoritos;
+- artistas conhecidos;
+- descobertas;
+- histórico;
+- pesos de preferência;
+- feedback;
+- configurações.
+
+Estrutura conceitual:
+
+```text
+AUTH USER
+    │
+    │ user_id
+    ▼
+MUSIC PROFILE
+    │
+    ├── Favorite Artists
+    ├── Known Artists
+    ├── Disliked Artists
+    ├── Discoveries
+    └── Interaction History
+```
+
+---
+
+# 7. Banco de dados
+
+Tecnologia inicial recomendada:
+
+**Supabase + PostgreSQL**
+
+Utilizar Row Level Security (RLS) para garantir que dados privados do usuário só possam ser acessados pelo próprio usuário.
+
+Estrutura inicial conceitual:
+
+```text
+profiles
+    user_id
+    display_name
+    created_at
+
+user_artists
+    user_id
+    artist_id
+    status
+    weight
+    created_at
+
+user_discoveries
+    user_id
+    artist_id
+    action
+    created_at
+
+user_interactions
+    user_id
+    artist_id
+    interaction
+    created_at
+```
+
+---
+
+# 8. Perfil do artista
+
+O perfil visual de um artista deve ser compacto.
+
+Formato aprovado:
+
+```text
+Artist
+
+Country, Year
+
+Genres
+...
+
+Tags
+...
+
+Similar Artists
+...
+
+Identity
+...
+
+Discography
+...
+```
+
+Exemplo:
+
+```text
+Radiohead
+
+United Kingdom, 1985
+
+Genres
+Alternative Rock, Art Rock, Experimental Rock
+
+Tags
+British, Alternative, Melancholic, Atmospheric, Experimental
+
+Similar Artists
+Thom Yorke, Portishead, Massive Attack, Muse, PJ Harvey, The Smile
+
+Identity
+MusicBrainz: ...
+Last.fm: ...
+Spotify: ...
+
+Discography
+A Moon Shaped Pool, 2016
+The King of Limbs, 2011
+In Rainbows, 2007
+Hail to the Thief, 2003
+Amnesiac, 2001
+Kid A, 2000
+OK Computer, 1997
+The Bends, 1995
+Pablo Honey, 1993
+```
+
+---
+
+# 9. Regra de apresentação: Country + Year
+
+Na interface, país e ano de formação devem aparecer juntos:
+
+```text
+United Kingdom, 1985
+```
+
+e não:
+
+```text
+Country
+United Kingdom
+
+Formed
+1985
+```
+
+Objetivo:
+
+- economizar espaço vertical;
+- melhorar leitura;
+- deixar o perfil mais elegante;
+- evitar excesso de campos.
+
+No banco, entretanto, os valores continuam separados:
+
+```text
+country = "United Kingdom"
+formed = 1985
+```
+
+Isso permite filtros e consultas eficientes.
+
+---
+
+# 10. Discografia
+
+A discografia deve ser apresentada em **ordem cronológica inversa**.
+
+Mais recente primeiro.
+
+Exemplo:
+
+```text
+A Moon Shaped Pool, 2016
+The King of Limbs, 2011
+In Rainbows, 2007
+Hail to the Thief, 2003
+...
+```
+
+Regra:
+
+```text
+ORDER BY release_year DESC
+```
+
+O objetivo é permitir que o usuário veja primeiro o trabalho mais atual do artista.
+
+O banco pode armazenar a data completa quando disponível, mas a apresentação inicial deve utilizar somente o ano:
+
+```text
+Album, 2016
+```
+
+---
+
+# 11. Fontes de dados
+
+A aplicação deve trabalhar com múltiplas fontes.
+
+Nenhuma fonte externa deve ser considerada o "cérebro" definitivo do produto.
+
+As fontes são fornecedores de dados.
+
+## 11.1 MusicBrainz
+
+Função principal:
+
+- identidade dos artistas;
+- identificadores únicos;
+- nome;
+- tipo;
+- país;
+- ano/data de formação;
+- gêneros;
+- tags;
+- relacionamentos;
+- discografia;
+- links externos.
+
+O MusicBrainz ID deve ser usado como uma das principais formas de identificação interna.
+
+Exemplo:
+
+```text
+Radiohead
+    ↓
+MusicBrainz ID
+    ↓
+entidade única
+```
+
+Isso reduz problemas com:
+
+- artistas homônimos;
+- grafias diferentes;
+- aliases;
+- nomes internacionais.
+
+---
+
+# 12. Last.fm
+
+Função principal:
+
+- artistas similares;
+- grau de similaridade;
+- tags;
+- sinais adicionais de afinidade musical.
+
+Exemplo conceitual:
+
+```text
+Radiohead
+
+Muse             0.91
+Portishead       0.82
+Massive Attack   0.78
+PJ Harvey        0.75
+Doves            0.71
+```
+
+A relação deve ser armazenada com:
+
+```text
+artist_id
+related_artist_id
+score
+source
+```
+
+Nunca tratar a relação simplesmente como uma lista sem peso.
+
+---
+
+# 13. Relações entre artistas
+
+O sistema deve representar relações como dados quantitativos.
+
+Exemplo:
+
+```text
+Radiohead → Portishead
+
+score: 0.82
+source: Last.fm
+```
+
+No futuro, a relação poderá conter múltiplos sinais:
+
+```text
+similarity
+genre_similarity
+tag_similarity
+era_similarity
+geographic_similarity
+audience_similarity
+```
+
+O objetivo é que o nosso próprio sistema possa eventualmente aprender que:
+
+> "similaridade musical" não é uma variável única.
+
+---
+
+# 14. ListenBrainz
+
+ListenBrainz pode ser introduzido posteriormente.
+
+Função potencial:
+
+- comportamento coletivo;
+- histórico de escuta;
+- recomendações;
+- collaborative filtering;
+- descoberta baseada em usuários com gostos semelhantes.
+
+Não é obrigatório para o MVP.
+
+A prioridade inicial é:
+
+```text
+MusicBrainz
++
+Last.fm
++
+dados próprios
+```
+
+---
+
+# 15. Nosso próprio banco de relações
+
+As relações fornecidas pelas APIs externas são apenas matéria-prima.
+
+Com o tempo, o produto deve construir seu próprio conhecimento.
+
+Exemplo:
+
+```text
+Radiohead
+   │
+   ├── Portishead
+   │
+   ├── Massive Attack
+   │
+   ├── Doves
+   │
+   └── Slowdive
+```
+
+O sistema pode posteriormente armazenar:
+
+```text
+relationship_score
+source_score
+user_affinity
+discovery_success
+```
+
+Assim podemos descobrir quais relações realmente funcionam para nossos usuários.
+
+---
+
+# 16. Musical Profile
+
+O perfil musical do usuário não deve ser binário.
+
+Não basta:
+
+```text
+User likes Radiohead
+```
+
+Devemos utilizar pesos.
+
+Exemplo:
+
+```text
+Radiohead       0.95
+Portishead      0.91
+Björk           0.87
+Massive Attack  0.82
+```
+
+Esses pesos podem ser alterados por:
+
+- adição manual;
+- likes;
+- skips;
+- descobertas;
+- repetição de exploração;
+- artistas marcados como favoritos;
+- rejeições.
+
+---
+
+# 17. Diferenciar estados do artista
+
+O sistema deve distinguir:
+
+```text
+LIKED
+KNOWN
+DISCOVERED
+DISLIKED
+UNKNOWN
+```
+
+Exemplo:
+
+```text
+Radiohead
+status = liked
+
+Muse
+status = known
+
+Doves
+status = discovered
+
+Coldplay
+status = disliked
+```
+
+Isso é fundamental.
+
+O objetivo da descoberta não é simplesmente encontrar artistas semelhantes.
+
+O objetivo é encontrar artistas **que o usuário provavelmente ainda não conhece e que têm alta compatibilidade com seu gosto**.
+
+---
+
+# 18. Discovery Engine
+
+O Discovery Engine recebe o perfil do usuário:
+
+```text
+Radiohead       0.95
+Portishead      0.91
+Björk           0.87
+```
+
+e produz candidatos.
+
+Conceitualmente:
+
+```text
+USER PROFILE
+     ↓
+DISCOVERY ENGINE
+     ├── artist similarity
+     ├── genre similarity
+     ├── tag similarity
+     ├── era
+     ├── geography
+     ├── user history
+     ├── novelty
+     └── feedback
+     ↓
+CANDIDATE ARTISTS
+     ↓
+FILTER
+     ↓
+RANKED DISCOVERIES
+```
+
+---
+
+# 19. A descoberta não deve ser apenas "artistas similares"
+
+Esse é um princípio fundamental.
+
+Não queremos simplesmente:
+
+```text
+Radiohead
+   ↓
+Muse
+   ↓
+Coldplay
+   ↓
+...
+```
+
+Isso tende a criar uma cadeia previsível.
+
+Queremos:
+
+```text
+USER TASTE
+     ↓
+MUSICAL SIGNATURE
+     ↓
+CANDIDATES
+     ↓
+NOVELTY + COMPATIBILITY
+     ↓
+DISCOVERIES
+```
+
+---
+
+# 20. Musical Signature
+
+Quando o usuário adiciona vários artistas, o sistema deve tentar identificar uma assinatura musical.
+
+Exemplo:
+
+```text
+Radiohead
+Portishead
+Björk
+```
+
+Em vez de tratar como três listas independentes:
+
+```text
+similar(Radiohead)
++
+similar(Portishead)
++
+similar(Björk)
+```
+
+o sistema deve tentar encontrar características comuns:
+
+```text
+experimental
+atmospheric
+alternative
+electronic
+art rock
+melancholic
+```
+
+e relações menos óbvias.
+
+---
+
+# 21. Controle de distância musical
+
+O usuário não deve precisar explicar o que deseja.
+
+Um controle simples pode permitir:
+
+```text
+More Similar ───────────── More Surprising
+```
+
+Ou categorias:
+
+```text
+Very Close
+Close
+Exploratory
+Surprising
+```
+
+Isso controla a distância da descoberta.
+
+---
+
+# 22. Filtros
+
+Os filtros são secundários.
+
+A experiência principal não deve começar com uma tela cheia de filtros.
+
+Filtros potenciais:
+
+```text
+Country
+Period
+Genre
+Known / Unknown
+Similarity
+Discovery Distance
+```
+
+Exemplo:
+
+```text
+Country: Brazil
+Period: 1990–2000
+Distance: Exploratory
+```
+
+---
+
+# 23. Interface visual
+
+Uma das características principais do produto será a visualização das relações musicais.
+
+Conceito:
+
+```text
+                 Artist B
+                    │
+                    │
+Artist C ───── Artist A ───── Artist D
+                    │
+                    │
+                 Artist E
+```
+
+Quando o usuário seleciona um artista:
+
+```text
+Artist A
+```
+
+ele passa a ser o centro.
+
+Os relacionamentos são reorganizados.
+
+A experiência deve lembrar um **universo musical navegável**.
+
+---
+
+# 24. Artistas conhecidos x descobertas
+
+O mapa deve diferenciar visualmente:
+
+```text
+Known Artists
+```
+
+de:
+
+```text
+Discovery Candidates
+```
+
+Exemplo conceitual:
+
+```text
+● Radiohead
+● Portishead
+● Björk
+
+○ Doves
+○ Slowdive
+○ Broadcast
+○ Talk Talk
+```
+
+Os círculos `○` representam potenciais descobertas.
+
+---
+
+# 25. Explicação da recomendação
+
+Sempre que possível, o usuário deve conseguir entender:
+
+> "Por que este artista apareceu?"
+
+Exemplo:
+
+```text
+Doves
+
+Why this appeared:
+
+Radiohead      ████████
+Portishead     ██████
+Björk          █████
+```
+
+Isso aumenta a confiança no sistema.
+
+---
+
+# 26. Feedback
+
+O usuário deve conseguir agir rapidamente:
+
+```text
+❤️ Like
+👎 Don't like
++ Already know
+```
+
+Opcionalmente:
+
+```text
+Explore
+Save
+```
+
+Cada interação alimenta o perfil.
+
+---
+
+# 27. Princípio inspirado no Nokia MixRadio
+
+O projeto deve incorporar alguns princípios observados na experiência do MixRadio:
+
+- poucos artistas podem servir como sementes;
+- o gosto do usuário deve ser ponderado;
+- comportamento deve modificar o perfil;
+- similaridade não deve ser apenas gênero;
+- descobertas podem ultrapassar o círculo óbvio;
+- o sistema deve aprender continuamente;
+- qualidade dos metadados é importante;
+- descoberta deve parecer natural, não como um questionário.
+
+Não tentar reproduzir algoritmos proprietários do MixRadio.
+
+Utilizar apenas os princípios conceituais observados publicamente.
+
+---
+
+# 28. Arquitetura inicial
+
+Arquitetura recomendada:
+
+```text
+                BROWSER
+                   │
+                   ▼
+             Next.js / React
+                   │
+                   ▼
+                API
+                   │
+          ┌────────┴────────┐
+          ▼                 ▼
+     Supabase Auth      Discovery Engine
+          │                 │
+          ▼                 ▼
+       PostgreSQL      External APIs
+          │                 │
+          │       ┌─────────┼─────────┐
+          │       ▼         ▼         ▼
+          │   MusicBrainz Last.fm ListenBrainz
+          │
+          ▼
+      User Profile
+```
+
+---
+
+# 29. Stack inicial sugerida
+
+Frontend:
+
+```text
+Next.js
+React
+```
+
+Visualização:
+
+```text
+Cytoscape.js
+```
+
+ou:
+
+```text
+Sigma.js
+```
+
+Backend/database:
+
+```text
+Supabase
+PostgreSQL
+```
+
+Authentication:
+
+```text
+Supabase Auth
+```
+
+Deploy:
+
+```text
+Vercel
+```
+
+Essas escolhas podem ser revistas antes da implementação.
+
+---
+
+# 30. Modelo de dados inicial
+
+## ARTIST
+
+```text
+id
+name
+country
+formed
+```
+
+## ARTIST_GENRE
+
+```text
+artist_id
+genre
+```
+
+## ARTIST_TAG
+
+```text
+artist_id
+tag
+```
+
+## ARTIST_RELATIONSHIP
+
+```text
+artist_id
+related_artist_id
+score
+source
+```
+
+## ARTIST_IDENTITY
+
+```text
+artist_id
+musicbrainz_id
+lastfm_id
+spotify_id
+...
+```
+
+## ALBUM
+
+```text
+id
+artist_id
+name
+release_year
+```
+
+---
+
+# 31. Perfil do usuário
+
+## USER_ARTIST
+
+```text
+user_id
+artist_id
+status
+weight
+created_at
+updated_at
+```
+
+Possíveis statuses:
+
+```text
+liked
+known
+discovered
+disliked
+```
+
+## USER_INTERACTION
+
+```text
+user_id
+artist_id
+interaction
+created_at
+```
+
+Exemplos:
+
+```text
+like
+dislike
+known
+discover
+explore
+save
+```
+
+---
+
+# 32. Regras de UX aprovadas
+
+### Regra 1
+Não exigir cadastro para experimentar.
+
+### Regra 2
+Não utilizar senha tradicional inicialmente.
+
+### Regra 3
+Oferecer:
+
+```text
+Google
+Apple
+Magic Link
+```
+
+### Regra 4
+O usuário deve poder montar seu perfil antes de autenticar.
+
+### Regra 5
+Só pedir login quando existir uma razão clara:
+
+```text
+Save my profile
+```
+
+### Regra 6
+Não transformar o produto em chatbot.
+
+### Regra 7
+Pesquisa e filtros são os principais mecanismos de entrada.
+
+### Regra 8
+O sistema aprende através das ações do usuário.
+
+---
+
+# 33. O que NÃO fazer no MVP
+
+Não começar com:
+
+- cadastro obrigatório;
+- senha;
+- questionário musical;
+- dezenas de filtros;
+- integração obrigatória com Spotify;
+- sistema complexo de recomendação por IA;
+- rede social;
+- comentários;
+- playlists colaborativas;
+- excesso de metadados;
+- interface excessivamente complexa.
+
+O MVP deve provar uma coisa:
+
+> **"Com poucos artistas que eu já gosto, este sistema consegue me mostrar música que eu realmente quero conhecer?"**
+
+---
+
+# 34. Prioridade do MVP
+
+## Fase 1
+
+```text
+Artist Search
+        ↓
+Artist Profile
+        ↓
+Add to My Taste
+        ↓
+3–10 seed artists
+        ↓
+Basic Discovery
+        ↓
+Visual Map
+```
+
+## Fase 2
+
+```text
+Like
+Dislike
+Known
+Discovery History
+Weighted Profile
+```
+
+## Fase 3
+
+```text
+Advanced Filters
+Distance Control
+Why This Artist?
+```
+
+## Fase 4
+
+```text
+Collaborative Filtering
+ListenBrainz
+More sophisticated recommendation engine
+```
+
+## Fase 5
+
+Possíveis integrações:
+
+```text
+Spotify
+Apple Music
+YouTube Music
+```
+
+somente após verificar APIs, permissões e termos vigentes.
+
+---
+
+# 35. Decisões já aprovadas
+
+Estas decisões devem ser consideradas **fixas**, salvo decisão explícita posterior:
+
+### Produto
+
+- Web app.
+- Foco em descoberta musical.
+- Usuário começa com artistas que já conhece/gosta.
+- Não usar questionário como mecanismo principal.
+- Pesquisa e filtros são a entrada principal.
+- Visualização gráfica é parte importante da experiência.
+
+### Perfil do artista
+
+Formato:
+
+```text
+Artist
+
+Country, Year
+
+Genres
+Tags
+Similar Artists
+Identity
+Discography
+```
+
+### Discografia
+
+Sempre:
+
+```text
+mais recente
+↓
+mais antigo
+```
+
+Formato:
+
+```text
+Album, Year
+```
+
+### Dados
+
+Inicialmente:
+
+```text
+MusicBrainz
+Last.fm
+Our own database
+```
+
+ListenBrainz posteriormente.
+
+### Autenticação
+
+```text
+Supabase Auth
+
+Google
+Apple
+Magic Link
+```
+
+Sem senha tradicional inicialmente.
+
+### Fricção
+
+Exploração sem login.
+
+Login somente quando o usuário quiser preservar seu perfil.
+
+---
+
+# 36. Questões ainda abertas
+
+As seguintes decisões ainda precisam ser definidas antes da implementação final:
+
+1. Qual será a fonte de imagens dos artistas.
+2. Quais tipos de álbum entram na discografia:
+   - studio albums;
+   - EPs;
+   - live albums;
+   - compilations;
+   - singles.
+3. Quantos artistas similares serão inicialmente coletados.
+4. Como combinar scores de diferentes fontes.
+5. Qual será a fórmula inicial do Discovery Score.
+6. Como definir "já conhecido".
+7. Como evitar recomendações excessivamente populares.
+8. Como medir "novidade".
+9. Qual biblioteca gráfica será escolhida definitivamente.
+10. Quais filtros entram no primeiro MVP.
+11. Como armazenar cache das informações externas.
+12. Como respeitar limites e termos das APIs utilizadas.
+
+---
+
+# 37. Próximo passo recomendado
+
+Antes de escrever código, definir formalmente:
+
+```text
+ARTIST
+       ↓
+RELATIONSHIP
+       ↓
+USER TASTE
+       ↓
+DISCOVERY SCORE
+       ↓
+DISCOVERY LIST
+       ↓
+VISUAL MAP
+```
+
+A próxima etapa deve ser desenhar o **modelo de dados definitivo do MVP** e, principalmente, definir a primeira versão do **Discovery Score**.
+
+O Discovery Score será o coração do produto.
+
+A pergunta central será:
+
+> Dado que este usuário gosta desses 3–10 artistas, quais artistas desconhecidos devemos apresentar primeiro — e por quê?
+
+A implementação só deve começar depois que essa lógica estiver suficientemente definida.

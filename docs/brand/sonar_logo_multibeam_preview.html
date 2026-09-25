@@ -1,0 +1,161 @@
+<!DOCTYPE html>
+<html lang="pt-BR">
+<head>
+  <meta charset="UTF-8">
+  <script src="https://www.gstatic.com/antigravity/web/dev/tailwindcss.min.js"></script>
+  <style>
+    /* Pulso ortogonal a partir do centro de cada círculo */
+    .pulse-circle {
+      transform-box: fill-box;
+      transform-origin: center;
+    }
+
+    /* 
+      Ciclo de Sonar Real (4.2s no total):
+      - 0% a 12%: sobe rapidamente para escala 1.12
+      - 12% a 24%: retorna suavemente para escala 1.0
+      - 24% a 100%: FICA COMPLETAMENTE PARADO / ESTÁTICO (pausa de escuta acústica)
+    */
+    @keyframes sonarPingSweep {
+      0% {
+        transform: scale(1);
+        opacity: 0.88;
+      }
+      12% {
+        transform: scale(1.12);
+        opacity: 1;
+        filter: drop-shadow(0 0 7px currentColor);
+      }
+      24% {
+        transform: scale(1);
+        opacity: 0.88;
+      }
+      100% {
+        transform: scale(1);
+        opacity: 0.88;
+      }
+    }
+
+    /* Onda de propagação da esquerda para a direita com 4.2s de período */
+    .col-1 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.0s; }
+    .col-2 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.15s; }
+    .col-3 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.30s; }
+    .col-4 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.45s; }
+    .col-5 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.60s; }
+    .col-6 { animation: sonarPingSweep 4.2s infinite ease-in-out; animation-delay: 0.75s; }
+  </style>
+</head>
+<body class="bg-transparent text-[var(--foreground)] antialiased p-3 select-none">
+  <div class="bg-slate-950 border border-slate-800 rounded-2xl p-5 shadow-2xl space-y-4 max-w-xl mx-auto">
+    
+    <!-- Header com indicador de status -->
+    <div class="flex items-center justify-between border-b border-slate-800/80 pb-3">
+      <div class="flex items-center space-x-2">
+        <span class="w-2.5 h-2.5 rounded-full bg-emerald-400 animate-pulse"></span>
+        <span class="text-xs font-bold uppercase tracking-wider text-slate-300">
+          SONAR MULTIBEAM (CADÊNCIA PERIÓDICA DE VARREDURA)
+        </span>
+      </div>
+      <span class="text-[10px] font-mono text-emerald-400 bg-emerald-950/80 px-2 py-0.5 rounded border border-emerald-800/50">
+        ESCALA: +12% • PAUSA: 3.2s
+      </span>
+    </div>
+
+    <!-- Canvas Principal do Logo -->
+    <div class="bg-[#020512] rounded-xl p-4 border border-slate-800/90 flex items-center justify-center relative overflow-hidden shadow-inner">
+      
+      <!-- Fundo de Grade de Sonar Sutil -->
+      <div class="absolute inset-0 bg-[radial-gradient(#0ea5e9_1px,transparent_1px)] [background-size:18px_18px] opacity-10"></div>
+
+      <svg id="sonarLogoSvg" viewBox="0 0 540 180" class="w-full h-auto max-h-[160px] relative z-10" xmlns="http://www.w3.org/2000/svg">
+        <defs>
+          <!-- Filtro de Halos Fosforescentes Suaves -->
+          <filter id="sonarGlow" x="-15%" y="-15%" width="130%" height="130%">
+            <feGaussianBlur stdDeviation="1.8" result="blur" />
+            <feMerge>
+              <feMergeNode in="blur" />
+              <feMergeNode in="SourceGraphic" />
+            </feMerge>
+          </filter>
+        </defs>
+
+        <!-- SÍMBOLO: DISPERSÃO DO RASCUNHO (100% FLAT) -->
+        <g filter="url(#sonarGlow)">
+          
+          <!-- Coluna 1: Origem Azul Ciano (Baixa reflexão / Oceano) -->
+          <circle cx="35" cy="90" r="6" fill="#00d4ff" class="pulse-circle col-1" style="color: #00d4ff;" />
+
+          <!-- Coluna 2: Pulso Inicial -->
+          <circle cx="65" cy="90" r="8.5" fill="#00e5ff" class="pulse-circle col-2" style="color: #00e5ff;" />
+
+          <!-- Coluna 3: Transição Azul -> Verde-Água -->
+          <circle cx="98" cy="45" r="5" fill="#00d4ff" opacity="0.75" class="pulse-circle col-3" style="color: #00d4ff;" />
+          <circle cx="98" cy="68" r="7" fill="#00f5d4" class="pulse-circle col-3" style="color: #00f5d4;" />
+          <circle cx="98" cy="90" r="11" fill="#05f1cd" class="pulse-circle col-3" style="color: #05f1cd;" />
+          <circle cx="98" cy="112" r="7" fill="#00f5d4" class="pulse-circle col-3" style="color: #00f5d4;" />
+          <circle cx="98" cy="135" r="5" fill="#00d4ff" opacity="0.75" class="pulse-circle col-3" style="color: #00d4ff;" />
+
+          <!-- Coluna 4: Verde Sonar -> Lima (Frequência Média) -->
+          <circle cx="136" cy="32" r="7" fill="#10b981" opacity="0.8" class="pulse-circle col-4" style="color: #10b981;" />
+          <circle cx="136" cy="59" r="9" fill="#22c55e" class="pulse-circle col-4" style="color: #22c55e;" />
+          <circle cx="136" cy="90" r="13.5" fill="#84cc16" class="pulse-circle col-4" style="color: #84cc16;" />
+          <circle cx="136" cy="121" r="9" fill="#22c55e" class="pulse-circle col-4" style="color: #22c55e;" />
+          <circle cx="136" cy="148" r="7" fill="#10b981" opacity="0.8" class="pulse-circle col-4" style="color: #10b981;" />
+
+          <!-- Coluna 5: Amarelo -> Laranja (Aquecimento Acústico) -->
+          <circle cx="178" cy="25" r="9.5" fill="#eab308" class="pulse-circle col-5" style="color: #eab308;" />
+          <circle cx="178" cy="55" r="11.5" fill="#f59e0b" class="pulse-circle col-5" style="color: #f59e0b;" />
+          <circle cx="178" cy="90" r="14.5" fill="#f97316" class="pulse-circle col-5" style="color: #f97316;" />
+          <circle cx="178" cy="125" r="11.5" fill="#f59e0b" class="pulse-circle col-5" style="color: #f59e0b;" />
+          <circle cx="178" cy="155" r="9.5" fill="#eab308" class="pulse-circle col-5" style="color: #eab308;" />
+
+          <!-- Coluna 6: Arco Laranja Externo -->
+          <circle cx="224" cy="38" r="12" fill="#ea580c" class="pulse-circle col-6" style="color: #ea580c;" />
+          <circle cx="224" cy="142" r="12" fill="#ea580c" class="pulse-circle col-6" style="color: #ea580c;" />
+
+          <!-- Coluna 7: O GRANDE NÓ FOCAL VERMELHO 100% FLAT (Sem gradiente, sem sombreamento) -->
+          <circle cx="230" cy="90" r="25" fill="#ff2a2a" class="pulse-circle col-6" style="color: #ff2a2a;" />
+        </g>
+
+        <!-- TIPOGRAFIA DO LOGO -->
+        <text x="296" y="96" font-family="system-ui, -apple-system, sans-serif" font-size="36" font-weight="900" letter-spacing="4" fill="#ffffff">
+          SONAR
+        </text>
+        <text x="298" y="118" font-family="system-ui, -apple-system, sans-serif" font-size="10.5" font-weight="700" letter-spacing="3" fill="#ff3b30">
+          MUSIC DISCOVERY
+        </text>
+      </svg>
+    </div>
+
+    <!-- Simulação: Como fica na Navbar real do site -->
+    <div class="bg-slate-900/90 border border-slate-800 rounded-xl p-3 flex items-center justify-between">
+      <div class="flex items-center space-x-3">
+        <!-- Ícone Reduzido na Navbar -->
+        <div class="w-10 h-10 rounded-xl bg-[#030712] border border-slate-800 flex items-center justify-center p-1.5 shadow-md">
+          <svg viewBox="0 0 260 180" class="w-full h-full" xmlns="http://www.w3.org/2000/svg">
+            <circle cx="35" cy="90" r="10" fill="#00d4ff" />
+            <circle cx="70" cy="90" r="13" fill="#05f1cd" />
+            <circle cx="115" cy="90" r="17" fill="#22c55e" />
+            <circle cx="165" cy="90" r="21" fill="#f59e0b" />
+            <circle cx="225" cy="90" r="28" fill="#ff2a2a" />
+          </svg>
+        </div>
+        <div>
+          <div class="font-black text-sm tracking-tight text-white flex items-center gap-1.5">
+            SONAR
+            <span class="text-[9px] bg-red-950/80 text-red-400 font-bold px-1.5 py-0.2 rounded border border-red-800/40">ACOUSTIC</span>
+          </div>
+          <div class="text-[10px] text-slate-400 font-medium">Visualização na Barra Superior</div>
+        </div>
+      </div>
+
+      <div class="text-right">
+        <span class="text-[11px] font-semibold text-cyan-400 bg-cyan-950/60 px-2.5 py-1 rounded-lg border border-cyan-800/30">
+          Ping Periódico (4.2s)
+        </span>
+      </div>
+    </div>
+
+  </div>
+</body>
+</html>
