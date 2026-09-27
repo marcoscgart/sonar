@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useEffect, useRef, useState } from 'react';
+import React, { useEffect, useRef } from 'react';
 import cytoscape from 'cytoscape';
 import { UserArtist, DiscoveryCandidate, Artist } from '@/lib/types/sonar';
 import { BackgroundGraphLayer } from './BackgroundGraphLayer';
@@ -20,7 +20,6 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
 }) => {
   const containerRef = useRef<HTMLDivElement>(null);
   const cyRef = useRef<cytoscape.Core | null>(null);
-  const [highlightKnown, setHighlightKnown] = useState(false);
 
   useEffect(() => {
     if (!containerRef.current) return;
@@ -37,7 +36,6 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       const isSelected = selectedArtistId === seed.artistId;
       const classes = ['seed-node'];
       if (isSelected) classes.push('selected-node');
-      if (highlightKnown) classes.push('emphasized');
       elements.push({
         data: {
           id: seed.artistId,
@@ -189,15 +187,6 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
             'border-width': 1.5,
             'border-color': '#c7cad1',
             'z-index': 5,
-          },
-        },
-        // Filtro "Artistas Conhecidos" do painel Universo Musical: engrossa a borda das
-        // sementes para evidenciá-las — os nós que não mudam são as descobertas (novos).
-        {
-          selector: 'node.seed-node.emphasized',
-          style: {
-            'border-width': 4,
-            'border-color': '#4355f7',
           },
         },
         // Selecionado — apenas destaque de borda, sem crescer artificialmente a profundidade
@@ -413,14 +402,14 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       cy.stop();
       cy.destroy();
     };
-    // selectedArtistId/highlightKnown ficam de fora de propósito: eles só mudam a
-    // classe de nós já existentes (efeito abaixo), sem precisar destruir e reconstruir
-    // todo o grafo — reconstruir a cada clique multiplicava o risco de um handler de
-    // mouse antigo (Cytoscape registra alguns no window) disparar numa instância já
-    // destruída, causando "Cannot read properties of null (reading 'isHeadless')".
+    // selectedArtistId fica de fora de propósito: só muda a classe de um nó já existente
+    // (efeito abaixo), sem precisar destruir e reconstruir todo o grafo — reconstruir a cada
+    // clique multiplicava o risco de um handler de mouse antigo (Cytoscape registra alguns no
+    // window) disparar numa instância já destruída, causando "Cannot read properties of null
+    // (reading 'isHeadless')".
   }, [seeds, discoveries, onSelectArtist]);
 
-  // Atualiza seleção/destaque em cima do grafo já existente, sem recriar a instância.
+  // Atualiza seleção em cima do grafo já existente, sem recriar a instância.
   useEffect(() => {
     const cy = cyRef.current;
     if (!cy || cy.destroyed()) return;
@@ -430,9 +419,8 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       if (selectedArtistId) {
         cy.getElementById(selectedArtistId).addClass('selected-node');
       }
-      cy.nodes('.seed-node').toggleClass('emphasized', highlightKnown);
     });
-  }, [selectedArtistId, highlightKnown]);
+  }, [selectedArtistId]);
 
   return (
     <div className="relative w-full h-full bg-gradient-to-b from-[#12151c] to-[#0b0e14] overflow-hidden">
@@ -449,40 +437,6 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
         style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.3) 100%)' }}
       />
 
-      {/* Legenda do Mapa Musical — também funciona como filtro (clique em "Artistas Conhecidos") */}
-      {/* No mobile a busca e a lista viraram bottom sheets (fechados por padrão) e a tela ficou
-          livre; a legenda vai pro rodapé direito, deslocada acima da tab bar fixa (que flutua em
-          bottom-20, acima do badge "Powered by Netlify" injetado pela própria Netlify no canto
-          inferior direito). A partir do sm: volta pro canto superior direito, abaixo do header
-          flutuante, já que a tab bar e o badge só aparecem no mobile. */}
-      <div className="absolute bottom-40 right-4 sm:top-20 sm:bottom-auto z-10 bg-white/90 backdrop-blur-md p-3 rounded-2xl text-xs space-y-2 max-w-[calc(100vw-2rem)]">
-        <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
-          Universo Musical
-        </div>
-        <button
-          onClick={() => setHighlightKnown((v) => !v)}
-          title="Clique para evidenciar os artistas conhecidos"
-          className={`w-full flex items-center space-x-2 rounded-lg px-1.5 py-1 -mx-1.5 transition ${
-            highlightKnown ? 'bg-indigo-50' : 'hover:bg-slate-50'
-          }`}
-        >
-          <span
-            className={`w-3 h-3 rounded-full bg-white inline-block ${
-              highlightKnown ? 'border-2 border-indigo-500' : 'border border-indigo-400'
-            }`}
-          />
-          <span className={highlightKnown ? 'font-semibold text-indigo-700' : 'text-slate-700'}>
-            Artistas Conhecidos
-          </span>
-        </button>
-        <div className="flex items-center space-x-2">
-          <span className="w-3 h-3 rounded-full border border-slate-300 bg-slate-100 inline-block" />
-          <span className="text-slate-700">Descobertas</span>
-        </div>
-        <div className="text-[10px] text-slate-400 pt-1.5 mt-1 border-t border-slate-100">
-          Mais brilho = maior afinidade
-        </div>
-      </div>
     </div>
   );
 };

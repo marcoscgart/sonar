@@ -418,13 +418,15 @@ export default function HomePage() {
             os painéis já ficam sempre visíveis do lado esquerdo e essa barra some.
             Flutua a bottom-20 (em vez de grudar em bottom-0) pra não ficar atrás do badge
             "Powered by Netlify" que a própria Netlify injeta (iframe de z-index máximo, fora
-            do nosso controle — não dá pra escondê-lo, só desviar). */}
+            do nosso controle — não dá pra escondê-lo, só desviar). Vidro fosco escuro (padrão
+            iOS) em vez de branco opaco: deixa o grafo transparecer por trás, combinando com o
+            resto do tema escuro. */}
         <div className="sm:hidden fixed bottom-20 inset-x-0 z-40 px-4">
-          <div className="bg-white rounded-3xl shadow-lg shadow-slate-900/10 border border-slate-200 flex items-stretch overflow-hidden">
+          <div className="bg-black/40 backdrop-blur-xl backdrop-saturate-150 rounded-3xl shadow-lg shadow-black/30 border border-white/10 flex items-stretch overflow-hidden">
             <button
               onClick={() => toggleMobilePanel('search')}
               className={`flex-1 flex flex-col items-center justify-center py-2.5 transition ${
-                activeMobilePanel === 'search' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500'
+                activeMobilePanel === 'search' ? 'text-indigo-400 bg-white/10' : 'text-slate-300'
               }`}
             >
               <Search className="w-5 h-5" />
@@ -434,13 +436,13 @@ export default function HomePage() {
             <button
               onClick={() => toggleMobilePanel('list')}
               className={`flex-1 flex flex-col items-center justify-center py-2.5 transition ${
-                activeMobilePanel === 'list' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500'
+                activeMobilePanel === 'list' ? 'text-indigo-400 bg-white/10' : 'text-slate-300'
               }`}
             >
               <div className="relative">
                 <Music2 className="w-5 h-5" />
                 {displaySeedArtists.length > 0 && (
-                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-indigo-600 text-white text-[9px] font-bold flex items-center justify-center">
+                  <span className="absolute -top-1.5 -right-2.5 min-w-[16px] h-4 px-1 rounded-full bg-indigo-500 text-white text-[9px] font-bold flex items-center justify-center">
                     {displaySeedArtists.length}
                   </span>
                 )}
@@ -450,7 +452,7 @@ export default function HomePage() {
 
             <button
               onClick={() => setIsSaveModalOpen(true)}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 text-slate-500 transition"
+              className="flex-1 flex flex-col items-center justify-center py-2.5 text-slate-300 transition"
             >
               <User className="w-5 h-5" />
               <span className="text-[10px] font-semibold mt-0.5">Perfil</span>
