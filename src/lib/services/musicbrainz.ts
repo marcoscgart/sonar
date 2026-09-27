@@ -41,10 +41,104 @@ export async function fetchArtistImage(name: string): Promise<string | undefined
   return undefined;
 }
 
+// Extrai host + título de uma URL de página da Wikipedia (ex: "https://pt.wikipedia.org/wiki/C%C3%ADcero_(m%C3%BAsico)"
+// -> { host: 'pt.wikipedia.org', title: 'Cícero_(músico)' }), pra chamar a REST summary API certa.
+function parseWikipediaUrl(url: string): { host: string; title: string } | null {
+  try {
+    const parsed = new URL(url);
+    const title = decodeURIComponent(parsed.pathname.replace(/^\/wiki\//, ''));
+    if (!title) return null;
+    return { host: parsed.hostname, title };
+  } catch {
+    return null;
+  }
+}
+
+async function fetchWikipediaSummary(host: string, title: string): Promise<string | undefined> {
+  try {
+    const res = await fetch(
+      `https://${host}/api/rest_v1/page/summary/${encodeURIComponent(title)}`,
+      { headers: { 'User-Agent': USER_AGENT } }
+    );
+    if (res.ok) {
+      const data = await res.json();
+      if (data.extract) return data.extract;
+    }
+  } catch (e) {
+    console.warn(`Erro ao buscar biografia em ${host}:`, e);
+  }
+  return undefined;
+}
+
+// Extrai o Q-id de uma URL do Wikidata (ex: "https://www.wikidata.org/wiki/Q10263173" -> "Q10263173").
+function parseWikidataId(url: string): string | null {
+  const match = url.match(/Q\d+/);
+  return match ? match[0] : null;
+}
+
+// Prioridade de idioma pros sitelinks do Wikidata: português primeiro (UI do Sonar é pt-BR,
+// e artistas brasileiros/lusófonos têm cobertura melhor lá), depois inglês, depois qualquer
+// outro Wikipedia disponível (não wikcionário/wikivoyage/etc.).
+async function fetchBioViaWikidata(wikidataUrl: string): Promise<string | undefined> {
+  const qid = parseWikidataId(wikidataUrl);
+  if (!qid) return undefined;
+
+  try {
+    const res = await fetch(`https://www.wikidata.org/wiki/Special:EntityData/${qid}.json`, {
+      headers: { 'User-Agent': USER_AGENT },
+    });
+    if (!res.ok) return undefined;
+
+    const data = await res.json();
+    const sitelinks = data.entities?.[qid]?.sitelinks || {};
+    const langPriority = ['ptwiki', 'enwiki'];
+    const wikiKeys = Object.keys(sitelinks).filter((k) => /^[a-z]+wiki$/.test(k));
+    const orderedKeys = [
+      ...langPriority.filter((k) => wikiKeys.includes(k)),
+      ...wikiKeys.filter((k) => !langPriority.includes(k)),
+    ];
+
+    for (const key of orderedKeys) {
+      const lang = key.replace(/wiki$/, '');
+      const host = lang === 'en' ? 'en.wikipedia.org' : `${lang}.wikipedia.org`;
+      const summary = await fetchWikipediaSummary(host, sitelinks[key].title);
+      if (summary) return summary;
+    }
+  } catch (e) {
+    console.warn('Erro ao buscar biografia via Wikidata:', e);
+  }
+  return undefined;
+}
+
 /**
  * Busca a biografia editorial da banda (Wikipedia / Last.fm)
+ * @param wikipediaUrl Link da Wikipedia já vinculado ao artista no MusicBrainz (por MBID).
+ * @param wikidataUrl Link do Wikidata já vinculado ao artista no MusicBrainz — usado quando não
+ * há relation direta de Wikipedia (comum), seguindo os sitelinks até a página certa.
+ * Ambos, quando disponíveis, são usados ANTES de qualquer busca por nome — nomes comuns (ex:
+ * "Cícero", "Wings", "Genesis") colidem com outras entradas na Wikipedia (o orador romano Marco
+ * Túlio Cícero, a banda de Paul McCartney, o livro bíblico) e uma busca cega pelo nome do artista
+ * pode trazer a biografia de uma entidade completamente diferente mesmo quando o restante dos
+ * dados (foto, discografia, país) já está correto.
  */
-export async function fetchBandBio(name: string): Promise<string | undefined> {
+export async function fetchBandBio(
+  name: string,
+  wikipediaUrl?: string,
+  wikidataUrl?: string
+): Promise<string | undefined> {
+  if (wikipediaUrl) {
+    const target = parseWikipediaUrl(wikipediaUrl);
+    if (target) {
+      const summary = await fetchWikipediaSummary(target.host, target.title);
+      if (summary) return summary;
+    }
+  }
+
+  if (wikidataUrl) {
+    const summary = await fetchBioViaWikidata(wikidataUrl);
+    if (summary) return summary;
+  }
+
   // 1. Tenta Wikipedia com _(band) para não confundir com termos comuns (ex: Neurosis, Mastodon, Baroness)
   try {
     let res = await fetch(
@@ -327,10 +421,19 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
 
     const genres = (data.genres || []).map((g: any) => g.name);
 
+    // Link da Wikipedia (raro) e/ou do Wikidata (comum) já vinculados a ESTE mbid pelo
+    // MusicBrainz, se existirem — evita que fetchBandBio precise adivinhar a página certa só
+    // pelo nome (ver comentário na função).
+    const relations = data.relations || [];
+    const wikipediaUrl = relations.find((r: any) => r.type === 'wikipedia' && r.url?.resource)?.url
+      ?.resource;
+    const wikidataUrl = relations.find((r: any) => r.type === 'wikidata' && r.url?.resource)?.url
+      ?.resource;
+
     // Busca foto, biografia e tags do Last.fm em paralelo
     const [photoUrl, bio, lastfmTags] = await Promise.all([
       fetchArtistImage(data.name),
-      fetchBandBio(data.name),
+      fetchBandBio(data.name, wikipediaUrl, wikidataUrl),
       fetchLastFmTags(data.name),
     ]);
 
