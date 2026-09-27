@@ -103,6 +103,27 @@ export default function HomePage() {
     setMounted(true);
   }, []);
 
+  // No iOS Safari, focar o campo de busca (abrindo o teclado) faz o WebKit rolar o
+  // documento inteiro pra manter o input visível acima do teclado — um scroll nativo do
+  // browser que ignora nosso overflow:hidden em html/body, porque não é um scroll dentro
+  // de uma caixa com overflow, é a posição de scroll da JANELA em si. Isso empurrava o
+  // header (position:absolute no topo do layout) pra fora da tela por cima. Como a página
+  // nunca deveria rolar de verdade (cada área rolável é um elemento interno com seu próprio
+  // overflow-y-auto), forçamos a posição de volta pra (0,0) sempre que o WebKit tentar.
+  useEffect(() => {
+    const resetScroll = () => {
+      if (window.scrollX !== 0 || window.scrollY !== 0) {
+        window.scrollTo(0, 0);
+      }
+    };
+    window.addEventListener('scroll', resetScroll, { passive: true });
+    window.addEventListener('resize', resetScroll);
+    return () => {
+      window.removeEventListener('scroll', resetScroll);
+      window.removeEventListener('resize', resetScroll);
+    };
+  }, []);
+
   // Memoizado por userArtists (referência só muda quando o store muda de verdade): sem
   // isso, getSeedArtists() cria um array novo a cada render do HomePage (qualquer clique,
   // qualquer state local), fazendo o MusicalMap reconstruir e re-randomizar o grafo inteiro
