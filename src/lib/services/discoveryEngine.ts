@@ -1,6 +1,6 @@
 import { UserArtist, DiscoveryCandidate, DiscoveryReason, Artist } from '../types/sonar';
 import { fetchLastFmSimilarArtists, isJunkArtist } from './lastfm';
-import { fetchArtistImage } from './musicbrainz';
+import { fetchArtistImage, resolveArtistMatch } from './musicbrainz';
 
 export async function generateDiscoveryCandidates(
   seeds: UserArtist[],
@@ -108,21 +108,48 @@ export async function generateDiscoveryCandidates(
     .sort((a, b) => b.score - a.score)
     .slice(0, 12);
 
-  // Busca fotos dos candidatos em paralelo
+  // Pra desambiguar homônimos (ver resolveArtistMatch) usamos o país/gêneros do artista-semente
+  // que mais contribuiu pra essa recomendação (reasons já vem ordenado por similaridade).
+  const seedById = new Map(seeds.map((s) => [s.artistId, s.artist]));
+
+  // Busca (e, quando possível, resolve o MBID correto por desambiguação) e as fotos dos
+  // candidatos em paralelo
   const candidatesList: DiscoveryCandidate[] = await Promise.all(
     topCandidates.map(async (cand) => {
-      const photoUrl = await fetchArtistImage(cand.name);
+      let mbid = cand.mbid;
+      let country: string | null = null;
+      let genres = ['Descoberta Musical'];
+      let tags = ['Recomendado'];
+      let photoQueryName = cand.name;
+
+      if (!mbid) {
+        const contextSeed = seedById.get(cand.reasons[0]?.seedArtistId);
+        const resolved = await resolveArtistMatch(cand.name, {
+          country: contextSeed?.country,
+          genres: contextSeed?.genres,
+          tags: contextSeed?.tags,
+        });
+        if (resolved) {
+          mbid = resolved.mbid;
+          country = resolved.country;
+          if (resolved.genres.length > 0) genres = resolved.genres;
+          if (resolved.tags.length > 0) tags = resolved.tags;
+          photoQueryName = resolved.name;
+        }
+      }
+
+      const photoUrl = await fetchArtistImage(photoQueryName);
 
       const candidateArtist: Artist = {
-        id: cand.id,
+        id: mbid || cand.id,
         name: cand.name,
-        country: null,
+        country,
         formed: null,
-        genres: ['Descoberta Musical'],
-        tags: ['Recomendado'],
+        genres,
+        tags,
         similarArtists: [],
         identity: {
-          musicbrainzId: cand.mbid,
+          musicbrainzId: mbid,
         },
         discography: [],
         imageUrl: photoUrl,

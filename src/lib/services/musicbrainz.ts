@@ -21,6 +21,102 @@ interface MBArtistSearchItem {
   disambiguation?: string;
 }
 
+function normalizeForCompare(s: string): string {
+  return s
+    .normalize('NFD')
+    .replace(/[̀-ͯ]/g, '')
+    .toLowerCase()
+    .trim();
+}
+
+export interface ArtistMatchContext {
+  country?: string | null;
+  genres?: string[];
+  tags?: string[];
+}
+
+export interface ResolvedArtistMatch {
+  mbid: string;
+  name: string;
+  country: string | null;
+  genres: string[];
+  tags: string[];
+}
+
+/**
+ * Resolve o MBID mais provável pra um nome de artista vindo de uma fonte sem ID (o
+ * artist.getsimilar do Last.fm quase sempre omite mbid) usando o contexto do artista-semente
+ * que originou a recomendação (país e gêneros) pra desempatar entre homônimos — ex: "Cícero"
+ * tem pelo menos 6 entradas diferentes cadastradas no MusicBrainz (o cantor brasileiro, um
+ * trio de hip hop americano, um pianista de jazz romeno, um cantor alemão...). Sem isso, o nó
+ * de descoberta ficava com a foto (e, se clicado, os dados) de um homônimo qualquer.
+ *
+ * Comparação de nome ignora acentos (normalizeForCompare) porque a fonte às vezes manda o nome
+ * sem diacríticos ("Cicero" em vez de "Cícero") — sem isso o candidato certo nem entraria no
+ * desempate por ficar de fora do filtro de "nome exato".
+ *
+ * Barra de aceitação: exige nome exato. Se houver MAIS DE UM homônimo exato, exige também país
+ * ou gênero/tag em comum com o artista-semente — sem nenhum sinal de desambiguação, prefere não
+ * resolver a arriscar escolher o homônimo errado com aparência de certeza.
+ */
+export async function resolveArtistMatch(
+  name: string,
+  context: ArtistMatchContext
+): Promise<ResolvedArtistMatch | null> {
+  try {
+    const url = `https://musicbrainz.org/ws/2/artist/?query=${encodeURIComponent(name)}&fmt=json&limit=8`;
+    const res = await fetch(url, {
+      headers: { 'User-Agent': USER_AGENT, Accept: 'application/json' },
+      next: { revalidate: 86400 },
+    });
+    if (!res.ok) return null;
+
+    const data = await res.json();
+    const items: MBArtistSearchItem[] = data.artists || [];
+    if (items.length === 0) return null;
+
+    const normalizedQuery = normalizeForCompare(name);
+    const exactMatches = items.filter((item) => normalizeForCompare(item.name) === normalizedQuery);
+    if (exactMatches.length === 0) return null;
+
+    let best = exactMatches[0];
+
+    if (exactMatches.length > 1) {
+      const contextSignals = new Set(
+        [...(context.genres || []), ...(context.tags || [])].map((g) => g.toLowerCase())
+      );
+
+      const scored = exactMatches.map((item) => {
+        const countryMatch = !!context.country && item.country === context.country;
+        const itemSignals = [
+          ...(item.genres || []).map((g) => g.name),
+          ...(item.tags || []).map((t) => t.name),
+        ].map((g) => g.toLowerCase());
+        const genreOverlap = itemSignals.some((g) => contextSignals.has(g));
+        const confidence = (countryMatch ? 2 : 0) + (genreOverlap ? 1 : 0) + (item.score || 0) / 100;
+        return { item, countryMatch, genreOverlap, confidence };
+      });
+
+      scored.sort((a, b) => b.confidence - a.confidence);
+
+      if (!scored[0].countryMatch && !scored[0].genreOverlap) return null;
+
+      best = scored[0].item;
+    }
+
+    return {
+      mbid: best.id,
+      name: best.name,
+      country: best.country || null,
+      genres: (best.genres || []).slice(0, 5).map((g) => g.name),
+      tags: (best.tags || []).slice(0, 6).map((t) => t.name),
+    };
+  } catch (e) {
+    console.warn('Erro ao resolver identidade do artista de descoberta:', e);
+    return null;
+  }
+}
+
 /**
  * Busca a foto oficial da banda ou artista em alta resolução (Deezer CDN)
  */
