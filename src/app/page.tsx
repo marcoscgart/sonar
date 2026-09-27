@@ -237,7 +237,7 @@ export default function HomePage() {
           {/* Componente de Busca */}
           <div
             className={`${
-              activeMobilePanel === 'search' ? 'fixed inset-x-4 bottom-24 z-40' : 'hidden'
+              activeMobilePanel === 'search' ? 'fixed inset-x-4 bottom-40 z-40' : 'hidden'
             } sm:block sm:static sm:z-auto`}
           >
             {/* Fechar o sheet: fica FORA da área rolável do card (abaixo), sempre visível e
@@ -249,7 +249,7 @@ export default function HomePage() {
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[65dvh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+            <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] overflow-y-auto sm:max-h-none sm:overflow-visible">
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
                 <Compass className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
               </h2>
@@ -264,7 +264,7 @@ export default function HomePage() {
           <div
             className={`${
               activeMobilePanel === 'list'
-                ? 'fixed inset-x-4 bottom-24 z-40 max-h-[65dvh] overflow-y-auto'
+                ? 'fixed inset-x-4 bottom-40 z-40 max-h-[55dvh] overflow-y-auto'
                 : 'hidden'
             } sm:block sm:static sm:max-h-none sm:overflow-visible sm:z-auto`}
           >
@@ -413,9 +413,12 @@ export default function HomePage() {
 
         {/* Tab Bar Inferior — mobile only: unifica Busca e Lista em botões que abrem bottom
             sheets, + Perfil pra salvar, liberando o centro da tela pro grafo. A partir do sm:
-            os painéis já ficam sempre visíveis do lado esquerdo e essa barra some. */}
-        <div className="sm:hidden fixed bottom-0 inset-x-0 z-40 px-4 pb-[max(env(safe-area-inset-bottom),0.75rem)] pt-2 bg-gradient-to-t from-white via-white/95 to-transparent pointer-events-none">
-          <div className="pointer-events-auto bg-white rounded-3xl shadow-lg shadow-slate-900/10 border border-slate-200 flex items-stretch overflow-hidden">
+            os painéis já ficam sempre visíveis do lado esquerdo e essa barra some.
+            Flutua a bottom-20 (em vez de grudar em bottom-0) pra não ficar atrás do badge
+            "Powered by Netlify" que a própria Netlify injeta (iframe de z-index máximo, fora
+            do nosso controle — não dá pra escondê-lo, só desviar). */}
+        <div className="sm:hidden fixed bottom-20 inset-x-0 z-40 px-4">
+          <div className="bg-white rounded-3xl shadow-lg shadow-slate-900/10 border border-slate-200 flex items-stretch overflow-hidden">
             <button
               onClick={() => toggleMobilePanel('search')}
               className={`flex-1 flex flex-col items-center justify-center py-2.5 transition ${

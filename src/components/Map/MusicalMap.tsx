@@ -443,10 +443,11 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
 
       {/* Legenda do Mapa Musical — também funciona como filtro (clique em "Artistas Conhecidos") */}
       {/* No mobile a busca e a lista viraram bottom sheets (fechados por padrão) e a tela ficou
-          livre; a legenda vai pro rodapé direito, deslocada acima da tab bar fixa (bottom-24),
-          pra não ficar coberta por ela. A partir do sm: volta pro canto superior direito, abaixo
-          do header flutuante, já que a tab bar só existe no mobile. */}
-      <div className="absolute bottom-24 right-4 sm:top-20 sm:bottom-auto z-10 bg-white/90 backdrop-blur-md p-3 rounded-2xl text-xs space-y-2 max-w-[calc(100vw-2rem)]">
+          livre; a legenda vai pro rodapé direito, deslocada acima da tab bar fixa (que flutua em
+          bottom-20, acima do badge "Powered by Netlify" injetado pela própria Netlify no canto
+          inferior direito). A partir do sm: volta pro canto superior direito, abaixo do header
+          flutuante, já que a tab bar e o badge só aparecem no mobile. */}
+      <div className="absolute bottom-40 right-4 sm:top-20 sm:bottom-auto z-10 bg-white/90 backdrop-blur-md p-3 rounded-2xl text-xs space-y-2 max-w-[calc(100vw-2rem)]">
         <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
           Universo Musical
         </div>
