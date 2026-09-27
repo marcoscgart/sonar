@@ -8,23 +8,25 @@ interface ITunesSearchResult {
 
 /**
  * Busca uma prévia de 30s (MP3) de uma música do artista via iTunes Search API,
- * que é pública e não exige credenciais.
+ * que é pública e não exige credenciais. Sorteia entre as top 10 músicas retornadas
+ * (em vez de sempre pegar a primeira), pra cada seleção do artista tocar uma faixa diferente.
  */
 export async function fetchArtistPreview(
   artistName: string
 ): Promise<{ trackName: string; previewUrl: string } | undefined> {
   try {
     const res = await fetch(
-      `https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&media=music&entity=song&limit=5`,
+      `https://itunes.apple.com/search?term=${encodeURIComponent(artistName)}&media=music&entity=song&limit=10`,
       { next: { revalidate: 86400 } }
     );
     if (!res.ok) return undefined;
 
     const data: ITunesSearchResult = await res.json();
-    const match = data.results?.find((r) => r.previewUrl);
-    if (!match?.previewUrl) return undefined;
+    const candidates = data.results?.filter((r) => r.previewUrl) || [];
+    if (candidates.length === 0) return undefined;
 
-    return { trackName: match.trackName || artistName, previewUrl: match.previewUrl };
+    const pick = candidates[Math.floor(Math.random() * candidates.length)];
+    return { trackName: pick.trackName || artistName, previewUrl: pick.previewUrl! };
   } catch (e) {
     console.warn('Erro ao buscar prévia no iTunes:', e);
     return undefined;

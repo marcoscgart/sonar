@@ -100,6 +100,27 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       rect.width > reserveLeft + MIN_GRAPH_WIDTH && rect.height > 0
         ? { x1: reserveLeft, y1: 0, x2: rect.width, y2: rect.height }
         : undefined;
+    const layoutPadding = Math.max(20, Math.min(220, Math.min(rect.width, rect.height) * 0.3));
+
+    // Raio máximo (unidades do layout) que qualquer nó pode se afastar do centróide das
+    // sementes. Sem isso, cose deixa descobertas com conexão fraca derivarem livremente
+    // pela repulsão, inflando o bounding box — e como fit:true sempre reenquadra tudo, o
+    // grafo inteiro encolhe (texto ilegível sem zoom) só para caber esses outliers.
+    const MAX_RADIUS_FROM_CENTER = 260;
+    let centroid = { x: 0, y: 0 };
+    const clampToRadius = (pos: { x: number; y: number }) => {
+      const dx = pos.x - centroid.x;
+      const dy = pos.y - centroid.y;
+      const dist = Math.hypot(dx, dy);
+      if (dist <= MAX_RADIUS_FROM_CENTER || dist === 0) return pos;
+      const scale = MAX_RADIUS_FROM_CENTER / dist;
+      return { x: centroid.x + dx * scale, y: centroid.y + dy * scale };
+    };
+
+    // Sobreposição máxima tolerada entre dois nós (fração do tamanho combinado) — 0 seria
+    // "nunca encostar", 1 seria "pode cobrir por completo". Usado tanto no ajuste forte de
+    // pós-layout quanto no drift orgânico contínuo abaixo.
+    const MAX_OVERLAP_RATIO = 0.2;
 
     // Inicializa o grafo Cytoscape
     const cy = cytoscape({
@@ -218,13 +239,11 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
         edgeElasticity: () => 200,
         gravity: 1.5,
         nodeOverlap: 24,
-        fit: true,
-        // fit:true sempre escala o grafo pra preencher o container inteiro — reduzir
-        // repulsão/idealEdgeLength só muda a forma relativa, não o quão "zoomado" ele
-        // fica. Um padding grande é o que de fato encolhe o conjunto na tela. Precisa ser
-        // relativo ao tamanho do container: em telas estreitas (mobile), um padding fixo
-        // grande passa da própria largura disponível e quebra o fit (área negativa).
-        padding: Math.max(20, Math.min(220, Math.min(rect.width, rect.height) * 0.3)),
+        // fit desligado aqui: fazemos o fit manualmente depois de travar MAX_RADIUS_FROM_CENTER
+        // (ver 'layoutstop' abaixo), senão o cose reenquadra com base no bounding box ainda
+        // não clampado e o passo seguinte "pula" pra um zoom bem diferente.
+        fit: false,
+        padding: layoutPadding,
         boundingBox: layoutBoundingBox,
         randomize: true,
       } as cytoscape.LayoutOptions,
@@ -234,17 +253,43 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
     // em loop, tirando a sensação estática/flat do grafo. Usa cy.animate() (sistema de
     // animação "normal" do Cytoscape, que o render loop respeita e cy.stop()/destroy()
     // encerram de verdade — diferente do loop interno do layout cose, ver nota acima).
+    // Empurra um alvo de posição pra longe de qualquer nó que já esteja mais perto do que
+    // MAX_OVERLAP_RATIO permite — usado a cada pulso do drift (abaixo) pra evitar que a
+    // caminhada aleatória reintroduza aos poucos a sobreposição que o ajuste inicial corrigiu.
+    // Unilateral (só o nó em questão se afasta, o vizinho fica parado): suficiente aqui porque
+    // cada nó recalcula seu próprio alvo com frequência, então o sistema se autocorrige.
+    const avoidOverlap = (node: cytoscape.NodeSingular, pos: { x: number; y: number }) => {
+      let result = pos;
+      cy.nodes().forEach((other) => {
+        if (other.same(node)) return;
+        const op = other.position();
+        const dx = result.x - op.x;
+        const dy = result.y - op.y;
+        const dist = Math.hypot(dx, dy) || 0.01;
+        const minDist = ((node.width() + other.width()) / 2) * (1 - MAX_OVERLAP_RATIO);
+        if (dist < minDist) {
+          const push = minDist - dist;
+          const ux = dx / dist;
+          const uy = dy / dist;
+          result = clampToRadius({ x: result.x + ux * push, y: result.y + uy * push });
+        }
+      });
+      return result;
+    };
+
     const floatNode = (node: cytoscape.NodeSingular) => {
       if (cy.destroyed()) return;
       const pos = node.position();
       const drift = 16;
+      const target = avoidOverlap(
+        node,
+        clampToRadius({
+          x: pos.x + (Math.random() - 0.5) * drift * 2,
+          y: pos.y + (Math.random() - 0.5) * drift * 2,
+        })
+      );
       node.animate(
-        {
-          position: {
-            x: pos.x + (Math.random() - 0.5) * drift * 2,
-            y: pos.y + (Math.random() - 0.5) * drift * 2,
-          },
-        },
+        { position: target },
         {
           duration: 3000 + Math.random() * 2500,
           easing: 'ease-in-out-sine',
@@ -253,9 +298,82 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       );
     };
     const floatStartTimeouts: ReturnType<typeof setTimeout>[] = [];
+
+    // Com animate:false o cose roda de forma síncrona dentro do próprio construtor
+    // cytoscape({...}) acima — 'layoutstop' já disparou antes desta linha, então tratamos
+    // o pós-layout aqui direto (sem esperar por evento): calcula o centróide das sementes,
+    // prende todo nó a no máximo MAX_RADIUS_FROM_CENTER dali, refaz o fit já com o bounding
+    // box final e só então inicia o drift orgânico (que também respeita o mesmo raio, ver
+    // floatNode acima).
+    const seedNodes = cy.nodes('.seed-node');
+    if (seedNodes.length > 0) {
+      const sum = seedNodes.reduce(
+        (acc, n) => {
+          const p = n.position();
+          return { x: acc.x + p.x, y: acc.y + p.y };
+        },
+        { x: 0, y: 0 }
+      );
+      centroid = { x: sum.x / seedNodes.length, y: sum.y / seedNodes.length };
+    }
+
+    // Separação por pares ANTES de qualquer clamp de raio: se a gente prender tudo a
+    // MAX_RADIUS_FROM_CENTER primeiro, nós que o cose colocou na mesma direção (puxados pela
+    // mesma semente forte) ficam espremidos no mesmo ponto do círculo, e sobra pouco arco pra
+    // separar sem violar o raio — competindo com a própria separação. Deixando a separação
+    // achar o espaço que precisa livremente primeiro, e só prendendo ao raio depois (como
+    // rede de segurança pra outliers, não como meta de compactação), os dois deixam de brigar.
+    const SEPARATION_ITERATIONS = 60;
+    cy.batch(() => {
+      for (let iter = 0; iter < SEPARATION_ITERATIONS; iter++) {
+        let moved = false;
+        const nodes = cy.nodes().toArray();
+        for (let i = 0; i < nodes.length; i++) {
+          for (let j = i + 1; j < nodes.length; j++) {
+            const a = nodes[i];
+            const b = nodes[j];
+            const pa = a.position();
+            const pb = b.position();
+            const dx = pb.x - pa.x;
+            const dy = pb.y - pa.y;
+            const dist = Math.hypot(dx, dy) || 0.01;
+            const minDist = ((a.width() + b.width()) / 2) * (1 - MAX_OVERLAP_RATIO);
+            if (dist < minDist) {
+              moved = true;
+              const overlap = minDist - dist;
+              const ux = dx / dist;
+              const uy = dy / dist;
+              a.position({ x: pa.x - (ux * overlap) / 2, y: pa.y - (uy * overlap) / 2 });
+              b.position({ x: pb.x + (ux * overlap) / 2, y: pb.y + (uy * overlap) / 2 });
+            }
+          }
+        }
+        if (!moved) break;
+      }
+    });
+
+    // Rede de segurança: só depois de resolvida a sobreposição, prende outliers que ainda
+    // assim tenham sobrado muito longe do centróide (raio bem mais generoso do que antes —
+    // não é mais o principal responsável pela compactação, só evita um nó isolado fugir demais).
+    cy.batch(() => {
+      cy.nodes().forEach((node) => {
+        node.position(clampToRadius(node.position()));
+      });
+    });
+
+    cy.fit(undefined, layoutPadding);
+
     cy.nodes().forEach((node) => {
       // Início escalonado pra não sincronizar todo mundo no mesmo pulso
       floatStartTimeouts.push(setTimeout(() => floatNode(node), Math.random() * 3000));
+    });
+
+    // Arrastar manualmente um nó interrompe o drift orgânico dele pra sempre: sem isso, o
+    // node.animate() em loop do floatNode brigava com o arraste do usuário, fazendo o nó
+    // "voltar sozinho" ou tremer em vez de ficar onde foi solto. stop() não dispara o
+    // callback 'complete' do animate, então a cadeia de floatNode simplesmente para aqui.
+    cy.on('grab', 'node', (evt) => {
+      evt.target.stop();
     });
 
     // Clique no nó para focar e centralizar
@@ -309,7 +427,7 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
   }, [selectedArtistId, highlightKnown]);
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-b from-[#f6f7fa] to-[#eceef3] overflow-hidden">
+    <div className="relative w-full h-full bg-gradient-to-b from-[#d1d2d5] to-[#c9cacf] overflow-hidden">
       {/* Constelação decorativa atrás do grafo interativo — dá sensação de profundidade */}
       <BackgroundGraphLayer />
 
@@ -320,12 +438,15 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
           automaticamente, então se adapta a qualquer formato de tela sem JS. */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(15,23,42,0.08) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(15,23,42,0.13) 100%)' }}
       />
 
       {/* Legenda do Mapa Musical — também funciona como filtro (clique em "Artistas Conhecidos") */}
-      {/* No mobile o painel de busca ocupa top-left até 50dvh; a legenda vai pro rodapé direito pra não brigar por espaço (a faixa livre no topo direito é estreita demais). A partir do sm: volta pro canto superior direito. */}
-      <div className="absolute bottom-4 right-4 sm:top-4 sm:bottom-auto z-10 bg-white/90 backdrop-blur-md p-3 rounded-2xl text-xs space-y-2 shadow-lg max-w-[calc(100vw-2rem)]">
+      {/* No mobile a busca e a lista viraram bottom sheets (fechados por padrão) e a tela ficou
+          livre; a legenda vai pro rodapé direito, deslocada acima da tab bar fixa (bottom-24),
+          pra não ficar coberta por ela. A partir do sm: volta pro canto superior direito, abaixo
+          do header flutuante, já que a tab bar só existe no mobile. */}
+      <div className="absolute bottom-24 right-4 sm:top-20 sm:bottom-auto z-10 bg-white/90 backdrop-blur-md p-3 rounded-2xl text-xs space-y-2 max-w-[calc(100vw-2rem)]">
         <div className="font-bold text-slate-500 uppercase tracking-wider text-[10px]">
           Universo Musical
         </div>

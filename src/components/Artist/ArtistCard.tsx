@@ -14,7 +14,9 @@ import {
   Loader2,
   X,
   Info,
-  Play
+  Play,
+  Plus,
+  Minus
 } from 'lucide-react';
 import { Artist, ArtistStatus, DiscoveryCandidate } from '@/lib/types/sonar';
 import { formatCountryAndYear } from '@/lib/services/musicbrainz';
@@ -82,7 +84,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   const countryYearStr = formatCountryAndYear(fullArtist.country, fullArtist.formed);
 
   return (
-    <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 shadow-xl text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl">
+    <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl">
       {/* Botão Fechar se fornecido */}
       {onClose && (
         <button
@@ -107,7 +109,24 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           </div>
         )}
         <div className="pr-6">
-          <h2 className="text-xl font-bold text-slate-900 leading-snug">{fullArtist.name}</h2>
+          <div className="flex items-center gap-2">
+            <h2 className="text-xl font-bold text-slate-900 leading-snug">{fullArtist.name}</h2>
+            {/* Atalho rápido ao lado do nome: adicionar/tirar do painel de perfil, sem precisar rolar até as Ações Rápidas abaixo */}
+            <button
+              onClick={() => onSetStatus(fullArtist, 'liked')}
+              title="Adicionar ao painel"
+              className="w-6 h-6 shrink-0 rounded-full bg-emerald-500 hover:bg-emerald-600 text-white flex items-center justify-center transition"
+            >
+              <Plus className="w-4 h-4" />
+            </button>
+            <button
+              onClick={() => onRemoveStatus(fullArtist.id)}
+              title="Tirar do painel"
+              className="w-6 h-6 shrink-0 rounded-full bg-rose-500 hover:bg-rose-600 text-white flex items-center justify-center transition"
+            >
+              <Minus className="w-4 h-4" />
+            </button>
+          </div>
 
           {/* Regra 9: Country + Year unificados na UI */}
           <div className="text-xs font-semibold text-indigo-600 flex items-center mt-1">

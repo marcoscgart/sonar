@@ -86,7 +86,7 @@ export const SearchBar: React.FC<SearchBarProps> = ({ onAddArtist }) => {
       </div>
 
       {isOpen && (
-        <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl shadow-xl overflow-hidden max-h-96 overflow-y-auto z-50">
+        <div className="absolute left-0 right-0 mt-2 bg-white border border-slate-200 rounded-2xl overflow-hidden max-h-96 overflow-y-auto z-50">
           {results.length > 0 ? (
             <div className="p-2 divide-y divide-slate-100">
               {results.map((artist) => {
