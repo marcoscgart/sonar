@@ -99,6 +99,12 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
         ? { x1: reserveLeft, y1: 0, x2: rect.width, y2: rect.height }
         : undefined;
     const layoutPadding = Math.max(20, Math.min(220, Math.min(rect.width, rect.height) * 0.3));
+    // Padding do fit FINAL (o que decide a escala em tela) — bem menor que o de layout acima.
+    // Aquele é generoso de propósito pra dar espaço ao cose distribuir os nós; usá-lo também
+    // aqui reservava até 30% da tela vazia nas bordas, deixando o cluster pequeno e sobrando
+    // fundo escuro em volta. Um padding pequeno e fixo faz o grafo ocupar quase a tela toda
+    // antes mesmo do zoom extra de 115% abaixo.
+    const FIT_PADDING = 16;
 
     // Raio máximo (unidades do layout) que qualquer nó pode se afastar do centróide das
     // sementes. Sem isso, cose deixa descobertas com conexão fraca derivarem livremente
@@ -352,11 +358,11 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
       });
     });
 
-    cy.fit(undefined, layoutPadding);
+    cy.fit(undefined, FIT_PADDING);
 
     // Pedido de produto: o grafo deve preencher 115% da tela (levemente cortado nas bordas)
     // em vez de só encostar nela — dá mais presença/imersão. Zoom extra centrado, por cima do
-    // fit padrão acima (que já resolveu o enquadramento "100%" correto).
+    // fit acima (que já resolveu o enquadramento "100%" correto, com padding mínimo).
     cy.zoom(cy.zoom() * 1.15);
     cy.center();
 
