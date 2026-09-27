@@ -3,7 +3,7 @@
 import React, { useState, useEffect, useMemo, useCallback } from 'react';
 import {
   Sparkles,
-  Compass,
+  Search,
   BookmarkPlus,
   RefreshCw,
   Trash2,
@@ -168,7 +168,7 @@ export default function HomePage() {
   };
 
   return (
-    <main className="h-dvh relative bg-[#cacccf] text-slate-900 font-sans selection:bg-indigo-500 selection:text-white overflow-hidden">
+    <main className="h-dvh relative bg-[#0b0e14] text-slate-900 font-sans selection:bg-indigo-500 selection:text-white overflow-hidden">
 
       {/* Main App Container: grafo ocupa a tela inteira (inclusive atrás do header), reforçando a sensação de "canvas" */}
       <div className="absolute inset-0">
@@ -183,9 +183,11 @@ export default function HomePage() {
           />
         </div>
 
-        {/* Gradiente decorativo no topo: branco esmaecendo pra transparente, sem barra sólida —
-            dá a sensação de que o grafo é um "canvas" contínuo por trás do header flutuante. */}
-        <div className="absolute inset-x-0 top-0 h-32 sm:h-28 bg-gradient-to-b from-white via-white/80 to-transparent pointer-events-none z-20" />
+        {/* Gradiente decorativo no topo: escurece pra transparente, sem barra sólida — dá a
+            sensação de que o grafo é um "canvas" contínuo por trás do header flutuante. Fundo
+            escuro (em vez do branco original) pra combinar com o badge "Powered by Netlify"
+            (que a plataforma injeta e não dá pra remover) e destacar mais o grafo. */}
+        <div className="absolute inset-x-0 top-0 h-32 sm:h-28 bg-gradient-to-b from-[#0b0e14] via-[#0b0e14]/80 to-transparent pointer-events-none z-20" />
 
         {/* Header flutuante — sem fundo/borda própria, só o gradiente acima garante legibilidade.
             No mobile só sobra a logo, centralizada (justify-center com um único filho visível);
@@ -201,7 +203,7 @@ export default function HomePage() {
               <button
                 onClick={clearProfile}
                 title="Limpar perfil temporário"
-                className="p-2 text-slate-500 hover:text-rose-600 hover:bg-slate-100 rounded-xl transition text-xs flex items-center space-x-1"
+                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs flex items-center space-x-1"
               >
                 <Trash2 className="w-4 h-4" />
                 <span className="hidden sm:inline">Limpar</span>
@@ -251,7 +253,7 @@ export default function HomePage() {
             </button>
             <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] overflow-y-auto sm:max-h-none sm:overflow-visible">
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                <Compass className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
+                <Search className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
               </h2>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Pesquise de 3 a 10 artistas que você ama para ativar o motor de descobertas do Sonar.
@@ -425,7 +427,7 @@ export default function HomePage() {
                 activeMobilePanel === 'search' ? 'text-indigo-600 bg-indigo-50' : 'text-slate-500'
               }`}
             >
-              <Compass className="w-5 h-5" />
+              <Search className="w-5 h-5" />
               <span className="text-[10px] font-semibold mt-0.5">Buscar</span>
             </button>
 

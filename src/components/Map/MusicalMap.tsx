@@ -175,15 +175,17 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
         },
         // Regra 24: Descobertas (○) — a profundidade é dada pelo BRILHO (opacidade) e tamanho,
         // proporcionais ao Discovery Score. Nada de sombra: nós "mais ao fundo" simplesmente
-        // ficam mais claros/apagados, os "mais à frente" ficam nítidos.
+        // ficam mais claros/apagados, os "mais à frente" ficam nítidos. Tamanho reduzido e piso
+        // de opacidade mais alto (em vez de 26–50px / 0.4–1) — os nós de baixo da lista ficavam
+        // grandes e esbranquiçados demais, brigando por espaço e legibilidade.
         {
           selector: 'node.discovery-node',
           style: {
-            width: 'mapData(score, 0.15, 0.98, 26, 50)',
-            height: 'mapData(score, 0.15, 0.98, 26, 50)',
+            width: 'mapData(score, 0.15, 0.98, 22, 42)',
+            height: 'mapData(score, 0.15, 0.98, 22, 42)',
             // Cast: @types/cytoscape tipa opacity como number, mas a string mapData() é válida em runtime.
-            opacity: 'mapData(score, 0.15, 0.98, 0.4, 1)' as unknown as number,
-            'text-opacity': 'mapData(score, 0.15, 0.98, 0.45, 1)' as unknown as number,
+            opacity: 'mapData(score, 0.15, 0.98, 0.65, 1)' as unknown as number,
+            'text-opacity': 'mapData(score, 0.15, 0.98, 0.7, 1)' as unknown as number,
             'border-width': 1.5,
             'border-color': '#c7cad1',
             'z-index': 5,
@@ -363,6 +365,12 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
 
     cy.fit(undefined, layoutPadding);
 
+    // Pedido de produto: o grafo deve preencher 115% da tela (levemente cortado nas bordas)
+    // em vez de só encostar nela — dá mais presença/imersão. Zoom extra centrado, por cima do
+    // fit padrão acima (que já resolveu o enquadramento "100%" correto).
+    cy.zoom(cy.zoom() * 1.15);
+    cy.center();
+
     cy.nodes().forEach((node) => {
       // Início escalonado pra não sincronizar todo mundo no mesmo pulso
       floatStartTimeouts.push(setTimeout(() => floatNode(node), Math.random() * 3000));
@@ -427,7 +435,7 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
   }, [selectedArtistId, highlightKnown]);
 
   return (
-    <div className="relative w-full h-full bg-gradient-to-b from-[#d1d2d5] to-[#c9cacf] overflow-hidden">
+    <div className="relative w-full h-full bg-gradient-to-b from-[#12151c] to-[#0b0e14] overflow-hidden">
       {/* Constelação decorativa atrás do grafo interativo — dá sensação de profundidade */}
       <BackgroundGraphLayer />
 
@@ -438,7 +446,7 @@ export const MusicalMap: React.FC<MusicalMapProps> = ({
           automaticamente, então se adapta a qualquer formato de tela sem JS. */}
       <div
         className="absolute inset-0 pointer-events-none"
-        style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(15,23,42,0.13) 100%)' }}
+        style={{ background: 'radial-gradient(ellipse at center, transparent 45%, rgba(0,0,0,0.3) 100%)' }}
       />
 
       {/* Legenda do Mapa Musical — também funciona como filtro (clique em "Artistas Conhecidos") */}

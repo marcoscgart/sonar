@@ -281,11 +281,11 @@ export const SonarLogo: React.FC<SonarLogoProps> = ({
       {showText && (
         <div>
           <div className="flex items-center space-x-1.5">
-            <h1 className={`font-black ${titleSizes} tracking-tight leading-none text-slate-900`}>
+            <h1 className={`font-black ${titleSizes} tracking-tight leading-none text-white`}>
               SONAR
             </h1>
-            <span className="text-[9px] font-bold uppercase tracking-wider px-1.5 py-0.5 rounded bg-red-100 text-red-600 border border-red-200">
-              ACOUSTIC
+            <span className="text-[7px] font-bold uppercase tracking-wider px-1 py-0.5 rounded bg-red-100 text-red-600 border border-red-200">
+              BETA
             </span>
           </div>
           <p className={`${subtitleSizes} text-cyan-600 font-semibold tracking-wide uppercase mt-0.5`}>
