@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect, useMemo, useCallback } from 'react';
+import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react';
 import {
   Sparkles,
   Search,
@@ -188,6 +188,18 @@ export default function HomePage() {
     setActiveMobilePanel((current) => (current === panel ? null : panel));
   };
 
+  // Tab bar do desktop: painéis já ficam sempre visíveis lá (ao contrário do mobile), então
+  // Buscar/Lista não escondem/mostram nada — só focam o campo de busca ou rolam até a lista,
+  // como um atalho de conveniência. Perfil reaproveita o mesmo modal do botão "Salvar Perfil".
+  const searchPanelRef = useRef<HTMLDivElement>(null);
+  const listPanelRef = useRef<HTMLDivElement>(null);
+  const focusSearchInput = () => {
+    searchPanelRef.current?.querySelector('input')?.focus();
+  };
+  const scrollToListPanel = () => {
+    listPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
+  };
+
   return (
     <main className="h-dvh relative bg-[#0b0e14] text-slate-900 font-sans selection:bg-indigo-500 selection:text-white overflow-hidden">
 
@@ -215,8 +227,35 @@ export default function HomePage() {
             Limpar e Salvar Perfil migram pra tab bar inferior. A partir do sm: volta ao layout
             de sempre (logo à esquerda, botões à direita). */}
         <div className="absolute top-0 inset-x-0 z-30 px-4 lg:px-8 py-3.5 flex items-center justify-center sm:justify-between">
-          {/* Logo Oficial Sonar Multibeam */}
-          <SonarLogo size="md" animated={true} showText={true} />
+          <div className="flex items-center sm:space-x-4">
+            {/* Logo Oficial Sonar Multibeam */}
+            <SonarLogo size="md" animated={true} showText={true} />
+
+            {/* Tab bar compacta — versão desktop da tab bar mobile (mesmo vidro fosco "Apple"),
+                encostada na logo em vez de ocupar a largura toda: aqui os painéis de Busca e
+                Lista já ficam sempre visíveis, então os botões só focam/rolam até eles em vez
+                de abri-los. Perfil aciona o mesmo modal do botão "Salvar Perfil" ao lado. */}
+            <div className="hidden sm:flex items-center gap-1 bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/10 rounded-full px-1.5 py-1.5 shadow-lg shadow-black/30">
+              <button
+                onClick={focusSearchInput}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+              >
+                <Search className="w-3.5 h-3.5" /> Buscar
+              </button>
+              <button
+                onClick={scrollToListPanel}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+              >
+                <Music2 className="w-3.5 h-3.5" /> Lista
+              </button>
+              <button
+                onClick={() => setIsSaveModalOpen(true)}
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+              >
+                <User className="w-3.5 h-3.5" /> Perfil
+              </button>
+            </div>
+          </div>
 
           {/* Action Buttons */}
           <div className="hidden sm:flex items-center space-x-2 sm:space-x-3">
@@ -259,6 +298,7 @@ export default function HomePage() {
 
           {/* Componente de Busca */}
           <div
+            ref={searchPanelRef}
             className={`${
               activeMobilePanel === 'search' ? 'fixed inset-x-4 bottom-40 z-40' : 'hidden'
             } sm:block sm:static sm:z-auto`}
@@ -285,6 +325,7 @@ export default function HomePage() {
 
           {/* Seeds Selecionadas pelo Usuário */}
           <div
+            ref={listPanelRef}
             className={`${
               activeMobilePanel === 'list'
                 ? 'fixed inset-x-4 bottom-40 z-40 max-h-[55dvh] overflow-y-auto'
