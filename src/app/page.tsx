@@ -26,14 +26,14 @@ import { Artist, DiscoveryCandidate, ArtistStatus } from '@/lib/types/sonar';
 // Artistas sugeridos para início rápido (3 sementes recomendadas no Sonar.txt)
 const STARTER_SEEDS: Artist[] = [
   {
-    id: 'a74b1b7f-71a5-4011-9441-d0b5e4122d11',
+    id: 'a74b1b7f-71a5-4011-9441-d0b5e4122711',
     name: 'Radiohead',
     country: 'United Kingdom',
-    formed: 1985,
+    formed: 1991,
     genres: ['Alternative Rock', 'Art Rock', 'Experimental Rock'],
     tags: ['British', 'Alternative', 'Melancholic', 'Atmospheric'],
     similarArtists: [],
-    identity: { musicbrainzId: 'a74b1b7f-71a5-4011-9441-d0b5e4122d11' },
+    identity: { musicbrainzId: 'a74b1b7f-71a5-4011-9441-d0b5e4122711' },
     discography: [
       { title: 'A Moon Shaped Pool', year: 2016 },
       { title: 'The King of Limbs', year: 2011 },
@@ -42,14 +42,14 @@ const STARTER_SEEDS: Artist[] = [
     ],
   },
   {
-    id: '084308bd-1654-436f-a9da-f879502b84a3',
+    id: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11',
     name: 'Portishead',
     country: 'United Kingdom',
     formed: 1991,
     genres: ['Trip Hop', 'Electronic', 'Downtempo'],
     tags: ['British', 'Trip Hop', 'Melancholic', 'Atmospheric'],
     similarArtists: [],
-    identity: { musicbrainzId: '084308bd-1654-436f-a9da-f879502b84a3' },
+    identity: { musicbrainzId: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11' },
     discography: [
       { title: 'Third', year: 2008 },
       { title: 'Portishead', year: 1997 },
@@ -57,14 +57,14 @@ const STARTER_SEEDS: Artist[] = [
     ],
   },
   {
-    id: '87c5dedd-3d4d-494e-87b8-8c0aed9d6ac8',
+    id: '87c5dedd-371d-4a53-9f7f-80522fb7f3cb',
     name: 'Björk',
     country: 'Iceland',
     formed: 1977,
     genres: ['Art Pop', 'Electronic', 'Experimental'],
     tags: ['Icelandic', 'Avant-Garde', 'Experimental', 'Electronic'],
     similarArtists: [],
-    identity: { musicbrainzId: '87c5dedd-3d4d-494e-87b8-8c0aed9d6ac8' },
+    identity: { musicbrainzId: '87c5dedd-371d-4a53-9f7f-80522fb7f3cb' },
     discography: [
       { title: 'Fossora', year: 2022 },
       { title: 'Utopia', year: 2017 },

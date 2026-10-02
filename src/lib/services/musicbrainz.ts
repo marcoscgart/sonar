@@ -12,6 +12,7 @@ interface MBArtistSearchItem {
   id: string; // MBID
   name: string;
   country?: string;
+  type?: string;
   'life-span'?: {
     begin?: string;
   };
@@ -352,9 +353,12 @@ export async function searchMusicBrainzArtists(query: string): Promise<Artist[]>
         // Busca fotos das bandas em paralelo
         const artistsWithPhotos = await Promise.all(
           topArtists.map(async (item) => {
-            const year = item['life-span']?.begin
-              ? parseInt(item['life-span'].begin.slice(0, 4), 10)
-              : null;
+            // Pra artista solo (Person) o "begin" do MusicBrainz é a data de NASCIMENTO, não o
+            // início da carreira — não mostra ano na busca; os detalhes calculam pelo 1º álbum.
+            const year =
+              item['life-span']?.begin && item.type !== 'Person'
+                ? parseInt(item['life-span'].begin.slice(0, 4), 10)
+                : null;
 
             const genres = (item.genres || []).slice(0, 5).map((g) => g.name);
             
@@ -488,9 +492,13 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
 
     const data = await res.json();
 
-    const formedYear = data['life-span']?.begin
-      ? parseInt(data['life-span'].begin.slice(0, 4), 10)
-      : null;
+    // Banda: "begin" é o ano de formação. Artista solo (Person): "begin" é o nascimento, então
+    // o ano exibido passa a ser o do 1º álbum/EP (início da carreira), calculado mais abaixo.
+    const isPerson = data.type === 'Person';
+    let formedYear: number | null =
+      !isPerson && data['life-span']?.begin
+        ? parseInt(data['life-span'].begin.slice(0, 4), 10)
+        : null;
 
     const rawReleaseGroups = data['release-groups'] || [];
     const albumsMap = new Map<string, Album>();
@@ -519,6 +527,10 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
     const sortedAlbums = Array.from(albumsMap.values()).sort(
       (a, b) => b.year - a.year
     );
+
+    if (isPerson && sortedAlbums.length > 0) {
+      formedYear = Math.min(...sortedAlbums.map((a) => a.year));
+    }
 
     const ignoredTags = new Set(['american', 'usa', 'english', 'british', 'uk', 'california', 'united states']);
     const sortedTags = (data.tags || [])

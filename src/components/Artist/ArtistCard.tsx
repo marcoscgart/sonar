@@ -22,6 +22,40 @@ import {
 import { Artist, ArtistStatus, DiscoveryCandidate } from '@/lib/types/sonar';
 import { formatCountryAndYear } from '@/lib/services/musicbrainz';
 
+// Converte o país do artista (sigla ISO "BR" ou nome por extenso "United Kingdom") na sigla de
+// 2 letras; devolve null se não reconhecer.
+let countryNameToCode: Map<string, string> | null = null;
+function resolveCountryCode(country?: string | null): string | null {
+  if (!country) return null;
+  const value = country.trim();
+  if (/^[A-Za-z]{2}$/.test(value)) return value.toUpperCase() === 'UK' ? 'GB' : value.toUpperCase();
+  if (!countryNameToCode) {
+    countryNameToCode = new Map();
+    try {
+      const names = ['en', 'pt'].map((l) => new Intl.DisplayNames([l], { type: 'region' }));
+      for (let a = 65; a <= 90; a++) {
+        for (let b = 65; b <= 90; b++) {
+          const code = String.fromCharCode(a, b);
+          // "UK" é código reservado (o ISO oficial do Reino Unido é "GB") e também resolve p/ "United Kingdom".
+          if (code === 'UK') continue;
+          for (const n of names) {
+            const name = n.of(code);
+            if (name && name !== code) countryNameToCode.set(name.toLowerCase(), code);
+          }
+        }
+      }
+    } catch {
+      // Intl.DisplayNames indisponível: segue sem bandeira
+    }
+  }
+  return countryNameToCode.get(value.toLowerCase()) ?? null;
+}
+
+// Sigla de 2 letras -> emoji de bandeira (letras viram "regional indicators").
+function flagEmoji(code: string): string {
+  return String.fromCodePoint(...[...code].map((c) => 0x1f1e6 + c.charCodeAt(0) - 65));
+}
+
 interface ArtistCardProps {
   artist: Artist;
   status?: ArtistStatus;
@@ -110,7 +144,11 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artist.id, detailsReady]);
 
-  const countryYearStr = formatCountryAndYear(fullArtist.country, fullArtist.formed);
+  const countryCode = resolveCountryCode(fullArtist.country);
+  // Com sigla reconhecida mostra "BR, 1985" (a bandeira vem antes, no JSX); senão mantém o texto original.
+  const countryYearStr = countryCode
+    ? [countryCode, fullArtist.formed].filter(Boolean).join(', ')
+    : formatCountryAndYear(fullArtist.country, fullArtist.formed);
 
   return (
     <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl">
@@ -160,6 +198,7 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           {/* Regra 9: Country + Year unificados na UI */}
           <div className="text-xs font-semibold text-indigo-600 flex items-center mt-1">
             <Globe className="w-3.5 h-3.5 mr-1 inline" />
+            {countryCode && <span className="mr-1 text-sm leading-none">{flagEmoji(countryCode)}</span>}
             {countryYearStr}
           </div>
 
