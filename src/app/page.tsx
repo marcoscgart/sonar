@@ -263,10 +263,11 @@ export default function HomePage() {
                 </div>
                 Lista
               </button>
+              {/* Desabilitado de propósito por enquanto — sem funcionalidade própria ainda. */}
               <button
-                onClick={() => setIsSaveModalOpen(true)}
+                disabled
                 title="Perfil (em construção)"
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-400 transition"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 cursor-not-allowed"
               >
                 <User className="w-3.5 h-3.5" /> Perfil
               </button>
@@ -321,19 +322,20 @@ export default function HomePage() {
                 : 'hidden'
             }
           >
-            {/* Fechar o sheet: fica FORA da área rolável do card (abaixo), sempre visível e
-                alcançável mesmo quando os resultados da busca crescem e ocupam a tela toda, ou
-                quando o teclado do celular cobre a tab bar e o botão "Buscar" não dá pra tocar. */}
-            <button
-              onClick={() => setActiveMobilePanel(null)}
-              className="sm:hidden absolute -top-2 -right-2 z-50 w-8 h-8 flex items-center justify-center bg-white text-slate-500 hover:text-slate-700 rounded-full shadow-md border border-slate-200 transition"
-            >
-              <X className="w-4 h-4" />
-            </button>
-            <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] sm:max-h-[60vh] overflow-y-auto">
-              <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
-                <Search className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
-              </h2>
+            <div className="bg-white/90 backdrop-blur-xl p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] sm:max-h-[60vh] overflow-y-auto">
+              <div className="flex items-center justify-between">
+                <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
+                  <Search className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
+                </h2>
+                {/* Fechar o sheet: dentro do card, mesmo padrão do painel de Lista (antes
+                    ficava flutuando fora do card, só na Busca — inconsistente). */}
+                <button
+                  onClick={() => setActiveMobilePanel(null)}
+                  className="sm:hidden p-1 text-slate-400 hover:text-slate-700 rounded-lg transition"
+                >
+                  <X className="w-3.5 h-3.5" />
+                </button>
+              </div>
               <p className="text-xs text-slate-500 leading-relaxed">
                 Pesquise de 3 a 10 artistas que você ama para ativar o motor de descobertas do Sonar.
               </p>
@@ -350,7 +352,7 @@ export default function HomePage() {
                 : 'hidden'
             }
           >
-          <div className="bg-white p-5 rounded-3xl flex flex-col shrink-0">
+          <div className="bg-white/90 backdrop-blur-xl p-5 rounded-3xl flex flex-col shrink-0">
             <div>
               <div className="flex items-center justify-between mb-4">
                 <h3 className="text-xs font-bold text-slate-700 uppercase tracking-wider flex items-center">
@@ -530,9 +532,11 @@ export default function HomePage() {
               <span className="text-[10px] font-semibold mt-0.5">Lista</span>
             </button>
 
+            {/* Desabilitado de propósito por enquanto — sem funcionalidade própria ainda. */}
             <button
-              onClick={() => setIsSaveModalOpen(true)}
-              className="flex-1 flex flex-col items-center justify-center py-2.5 text-slate-300 transition"
+              disabled
+              title="Perfil (em construção)"
+              className="flex-1 flex flex-col items-center justify-center py-2.5 text-slate-600 cursor-not-allowed"
             >
               <User className="w-5 h-5" />
               <span className="text-[10px] font-semibold mt-0.5">Perfil</span>
