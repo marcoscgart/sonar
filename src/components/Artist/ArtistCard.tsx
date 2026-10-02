@@ -42,6 +42,9 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
 }) => {
   const [fullArtist, setFullArtist] = useState<Artist>(artist);
   const [isLoadingDetails, setIsLoadingDetails] = useState<boolean>(false);
+  // Id do artista cujos detalhes (gêneros/tags reais) já terminaram de carregar. A prévia espera
+  // por isso: os gêneros da busca são provisórios e desambiguam mal artistas homônimos no iTunes.
+  const [detailsLoadedFor, setDetailsLoadedFor] = useState<string | null>(null);
   const [preview, setPreview] = useState<{ trackName: string; previewUrl: string } | null>(null);
 
   // Busca detalhes adicionais (discografia completa, foto e biografia) se ainda não foram carregados
@@ -68,18 +71,31 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           }
         })
         .catch((err) => console.error('Failed to load full artist details:', err))
-        .finally(() => setIsLoadingDetails(false));
+        .finally(() => {
+          setIsLoadingDetails(false);
+          setDetailsLoadedFor(artist.id);
+        });
     }
   }, [artist]);
 
-  // Busca uma prévia de 30s do artista (iTunes, sem necessidade de credenciais)
+  // Busca uma prévia de 30s do artista (iTunes, sem necessidade de credenciais). Só dispara
+  // quando os detalhes completos estão prontos (ou nunca foram necessários), pra usar os
+  // gêneros reais na desambiguação.
+  const needsDetails =
+    !!artist.identity.musicbrainzId && (artist.discography.length === 0 || !artist.bioSummary);
+  const detailsReady = !needsDetails || detailsLoadedFor === artist.id;
+
   useEffect(() => {
     setPreview(null);
-    fetch(`/api/preview?artist=${encodeURIComponent(artist.name)}`)
+    if (!detailsReady) return;
+    const hints = [...(fullArtist.genres || []), ...(fullArtist.tags || [])].slice(0, 8).join(',');
+    fetch(`/api/preview?artist=${encodeURIComponent(artist.name)}&genres=${encodeURIComponent(hints)}`)
       .then((res) => res.json())
       .then((data) => setPreview(data || null))
       .catch((err) => console.error('Failed to load artist preview:', err));
-  }, [artist]);
+    // fullArtist só entra via detailsReady: não refaz (e troca a faixa) a cada atualização dele.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [artist.id, detailsReady]);
 
   const countryYearStr = formatCountryAndYear(fullArtist.country, fullArtist.formed);
 

@@ -9,6 +9,7 @@ export async function GET(request: Request) {
     return NextResponse.json({ error: 'Missing artist parameter' }, { status: 400 });
   }
 
-  const preview = await fetchArtistPreview(artist);
+  const genres = (searchParams.get('genres') || '').split(',').filter(Boolean);
+  const preview = await fetchArtistPreview(artist, genres);
   return NextResponse.json(preview || null);
 }
