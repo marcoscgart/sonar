@@ -180,6 +180,28 @@ export default function HomePage() {
     setSelectedDiscovery(discoveryInfo || null);
   }, []);
 
+  // No mobile o painel de busca cobre o grafo: ao adicionar um artista, fecha o painel pra
+  // levar o usuário direto às relações. No desktop (dropdown ao lado) mantém aberto pra
+  // permitir adicionar vários em sequência.
+  const handleAddArtistFromSearch = (artist: Artist) => {
+    addSeedArtist(artist);
+    if (window.matchMedia('(max-width: 639px)').matches) {
+      setActiveMobilePanel(null);
+    }
+  };
+
+  // Ao esvaziar a lista (remover o último ou limpar tudo), abre a busca em vez de deixar o
+  // usuário olhando uma lista vazia.
+  const handleRemoveArtist = (id: string) => {
+    removeArtist(id);
+    if (seedArtists.length <= 1) setActiveMobilePanel('search');
+  };
+
+  const handleClearProfile = () => {
+    clearProfile();
+    if (activeMobilePanel === 'list') setActiveMobilePanel('search');
+  };
+
   const handleAddStarterSeeds = () => {
     STARTER_SEEDS.forEach((artist) => addSeedArtist(artist));
   };
@@ -214,6 +236,40 @@ export default function HomePage() {
             onSelectArtist={handleSelectMapNode}
           />
         </div>
+
+        {/* Boas-vindas: só pra quem chega sem nenhum artista no perfil (o grafo fica vazio e a tela
+            parece "preta e sem nada"). Some assim que há semente, painel aberto ou artista
+            selecionado. Abaixo do header (z-30) e dos painéis (z-40); o container não captura
+            toque, só o cartão. */}
+        {mounted && seedArtists.length === 0 && !activeMobilePanel && !selectedArtist && (
+          <div className="absolute inset-0 z-10 flex items-center justify-center px-6 pt-28 pb-32 pointer-events-none">
+            <div className="pointer-events-auto max-w-md w-full text-center space-y-5 bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/10 rounded-3xl p-7 shadow-lg shadow-black/30">
+              <div className="space-y-2">
+                <h1 className="text-xl sm:text-2xl font-bold text-white">
+                  Descubra música a partir do que você já ama
+                </h1>
+                <p className="text-sm text-slate-300 leading-relaxed">
+                  Escolha alguns artistas favoritos e o Sonar desenha um universo sonoro com novos
+                  nomes ligados ao seu gosto. Sem cadastro.
+                </p>
+              </div>
+              <div className="flex flex-col gap-2.5">
+                <button
+                  onClick={() => setActiveMobilePanel('search')}
+                  className="px-4 py-3 bg-indigo-500 hover:bg-indigo-400 text-white rounded-2xl text-sm font-semibold inline-flex items-center justify-center gap-2 transition"
+                >
+                  <Search className="w-4 h-4" /> Buscar um artista
+                </button>
+                <button
+                  onClick={handleAddStarterSeeds}
+                  className="px-4 py-2.5 bg-white/10 hover:bg-white/15 border border-white/10 text-slate-200 rounded-2xl text-xs font-semibold inline-flex items-center justify-center gap-2 transition"
+                >
+                  <Plus className="w-3.5 h-3.5" /> Ou começar com Radiohead, Portishead e Björk
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
 
         {/* Gradiente decorativo no topo: escurece pra transparente, sem barra sólida — dá a
             sensação de que o grafo é um "canvas" contínuo por trás do header flutuante. Fundo
@@ -278,7 +334,7 @@ export default function HomePage() {
               "Perfil" da tab bar (mobile e desktop) já cobre isso, unificado. */}
           {displaySeedArtists.length > 0 && (
             <button
-              onClick={clearProfile}
+              onClick={handleClearProfile}
               title="Limpar perfil temporário"
               className="hidden sm:flex p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs items-center space-x-1"
             >
@@ -339,7 +395,7 @@ export default function HomePage() {
               <p className="text-xs text-slate-500 leading-relaxed">
                 Pesquise de 3 a 10 artistas que você ama para ativar o motor de descobertas do Sonar.
               </p>
-              <SearchBar onAddArtist={addSeedArtist} />
+              <SearchBar onAddArtist={handleAddArtistFromSearch} />
             </div>
           </div>
 
@@ -368,7 +424,7 @@ export default function HomePage() {
                       junto da lista que ele afeta. A partir do sm: já existe no header. */}
                   {displaySeedArtists.length > 0 && (
                     <button
-                      onClick={clearProfile}
+                      onClick={handleClearProfile}
                       title="Limpar perfil temporário"
                       className="sm:hidden p-1 text-slate-400 hover:text-rose-600 rounded-lg transition"
                     >
@@ -455,7 +511,7 @@ export default function HomePage() {
                         <button
                           onClick={(e) => {
                             e.stopPropagation();
-                            removeArtist(art.id);
+                            handleRemoveArtist(art.id);
                           }}
                           className="p-1 text-slate-400 hover:text-rose-600 rounded-lg transition"
                         >

@@ -206,6 +206,17 @@ async function fetchBioViaWikidata(wikidataUrl: string): Promise<string | undefi
   return undefined;
 }
 
+const MUSIC_PAGE_PATTERN =
+  /\b(band|musician|singer|songwriter|rapper|duo|trio|quartet|group|ensemble|orchestra|dj|producer|composer|vocalist|guitarist|drummer|bassist|rock|punk|metal|hip hop|pop|jazz|folk|electronic|music(al)?|banda|cantor|cantora|músic[oa]|grupo)\b/i;
+
+// Busca por nome puro pode cair em páginas homônimas (ex: "Flicts", livro do Ziraldo). Só aceita
+// o resumo se a descrição curta (ou o início do texto) indicar que é sobre música.
+function looksLikeMusicPage(data: any): boolean {
+  if (data.type === 'disambiguation') return false;
+  const probe = `${data.description || ''} ${String(data.extract || '').slice(0, 300)}`;
+  return MUSIC_PAGE_PATTERN.test(probe);
+}
+
 /**
  * Busca a biografia editorial da banda (Wikipedia / Last.fm)
  * @param wikipediaUrl Link da Wikipedia já vinculado ao artista no MusicBrainz (por MBID).
@@ -249,7 +260,7 @@ export async function fetchBandBio(
     }
     if (res.ok) {
       const data = await res.json();
-      if (data.extract) {
+      if (data.extract && looksLikeMusicPage(data)) {
         return data.extract;
       }
     }
