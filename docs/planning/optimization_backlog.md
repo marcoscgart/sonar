@@ -3,28 +3,22 @@
 Levantado na sessão de 2026-09-27, durante o trabalho de redesign mobile (tab bar, dark
 mode) e correção de bugs de dados (bio/foto de artistas homônimos). Nenhum desses itens
 quebra o app hoje, mas são riscos reais que tendem a aparecer conforme o tráfego cresce.
-Nenhum foi implementado ainda — é lista de partida pra uma próxima sessão.
+
+**Atualização 2026-10-02**: o hosting migrou de Netlify pra Vercel (o time Netlify "BFM"
+esgotou os créditos do ciclo de faturamento e bloqueou deploys de produção). Projeto agora
+em `https://sonar-musicdiscovery.vercel.app`, conectado ao GitHub pra deploy automático a
+cada `git push` — não usa mais `netlify deploy`. Detalhes completos na memória do Claude
+(`project_sonar_next_session.md`, seção "Hosting: migrated Netlify → Vercel").
 
 ---
 
-## 1. 🔑 Chave do Last.fm é pública/compartilhada e já bateu rate limit
+## 1. ~~🔑 Chave do Last.fm é pública/compartilhada~~ — RESOLVIDO (2026-10-02)
 
-`LASTFM_API_KEY` em [lastfm.ts](../../src/lib/services/lastfm.ts) usa o fallback
-`'b25b959554ed76058ac220b7b2e0a026'` — uma chave demo pública, não exclusiva do projeto.
-Durante os próprios testes desta sessão (uma única pessoa, uso manual), a API já retornou:
-
-```json
-{"message":"Rate Limit Exceeded - ...", "error":29}
-```
-
-**Impacto**: quando isso acontece, `fetchLastFmSimilarArtists` cai pro fallback de
-similaridade por tags do MusicBrainz (mais lento, menos preciso) ou pra base
-`FALLBACK_SIMILARITIES` hardcoded (cobre só ~6 artistas). Com uso real (várias pessoas
-simultâneas), isso deve acontecer com frequência, degradando a qualidade das descobertas.
-
-**Próximo passo sugerido**: registrar uma chave própria do Last.fm (gratuita, só precisa de
-conta) e mover pra variável de ambiente (`.env.local` / Netlify env vars) em vez do
-fallback hardcoded.
+Verificado: o usuário já tinha sua própria chave do Last.fm configurada no `.env.local`
+local (não a chave demo pública hardcoded em [lastfm.ts](../../src/lib/services/lastfm.ts)),
+e ela já foi configurada como `LASTFM_API_KEY` no ambiente de produção da Vercel durante a
+migração. O rate limit observado nesta sessão veio de testes diretos via `curl` (sem a
+variável de ambiente), não do uso real do app. Sem ação pendente aqui.
 
 ---
 
@@ -36,8 +30,8 @@ chamada exata repetida*, mas cada combinação nova de artistas/sementes é cach
 percorrendo a cadeia inteira de APIs externas do zero.
 
 **Próximo passo sugerido**: avaliar uma camada própria (ex: tabela no Supabase já usado
-pelo projeto, ou Netlify Blobs) pra resultados de artista por MBID — bio, discografia,
-foto — com TTL longo (esses dados quase não mudam).
+pelo projeto, ou Vercel KV/Edge Config) pra resultados de artista por MBID — bio,
+discografia, foto — com TTL longo (esses dados quase não mudam).
 
 ---
 
@@ -51,7 +45,7 @@ Várias chamadas ao MusicBrainz disparam em paralelo sem controle:
 
 Sob uso de um usuário só isso raramente é problema (resultado cacheado 24h evita repetição),
 mas sob uso concorrente real (vários usuários gerando descobertas ao mesmo tempo, todos
-batendo o mesmo IP de saída do Netlify) arrisca respostas 503 do MusicBrainz.
+batendo o mesmo pool de IPs de saída da Vercel) arrisca respostas 503 do MusicBrainz.
 
 **Próximo passo sugerido**: registrar um `MB_USER_AGENT` com contato real (já existe, ver
 `USER_AGENT` em musicbrainz.ts) e considerar uma fila/throttle simples (ex: `p-limit` com
@@ -61,7 +55,7 @@ concorrência 1-2) especificamente pras chamadas ao `musicbrainz.org`.
 
 ## 4. 📦 Bundle inicial ~321kB (Cytoscape é a maior fatia)
 
-Build da Netlify reporta consistentemente:
+Build reporta consistentemente (Netlify antes, Vercel agora, mesmo número):
 ```
 ┌ ○ /    219 kB    321 kB First Load JS
 ```
