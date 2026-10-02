@@ -4,7 +4,6 @@ import React, { useState, useEffect, useMemo, useCallback, useRef } from 'react'
 import {
   Sparkles,
   Search,
-  BookmarkPlus,
   RefreshCw,
   Trash2,
   Music2,
@@ -274,27 +273,18 @@ export default function HomePage() {
             </div>
           </div>
 
-          {/* Action Buttons */}
-          <div className="hidden sm:flex items-center space-x-2 sm:space-x-3">
-            {displaySeedArtists.length > 0 && (
-              <button
-                onClick={clearProfile}
-                title="Limpar perfil temporário"
-                className="p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs flex items-center space-x-1"
-              >
-                <Trash2 className="w-4 h-4" />
-                <span className="hidden sm:inline">Limpar</span>
-              </button>
-            )}
-
+          {/* Limpar: a ação de salvar perfil não tem mais botão próprio aqui — o ícone
+              "Perfil" da tab bar (mobile e desktop) já cobre isso, unificado. */}
+          {displaySeedArtists.length > 0 && (
             <button
-              onClick={() => setIsSaveModalOpen(true)}
-              className="px-3.5 py-2 bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white font-semibold rounded-xl text-xs sm:text-sm shadow-md shadow-indigo-500/20 flex items-center space-x-1.5 transition"
+              onClick={clearProfile}
+              title="Limpar perfil temporário"
+              className="hidden sm:flex p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs items-center space-x-1"
             >
-              <BookmarkPlus className="w-4 h-4" />
-              <span>Salvar Perfil</span>
+              <Trash2 className="w-4 h-4" />
+              <span className="hidden sm:inline">Limpar</span>
             </button>
-          </div>
+          )}
         </div>
 
         {/* Painéis Flutuantes (Busca & Seeds Selecionadas) */}
@@ -305,11 +295,14 @@ export default function HomePage() {
             visíveis. Só um por vez (toggle), por isso não precisam mais empilhar com space-y. */}
         <div className="contents">
 
-          {/* Backdrop: toque fora fecha o painel aberto, em qualquer tamanho de tela */}
+          {/* Backdrop: toque fora fecha o painel aberto, em qualquer tamanho de tela. Blur
+              "estilo Apple" sobre o grafo por trás — testar se o canvas animado do Cytoscape
+              não sofre com isso (blur contínuo sobre conteúdo animado pode pesar em celulares
+              mais fracos); se notar engasgo, trocar backdrop-blur-sm por só mais opacidade. */}
           {activeMobilePanel && (
             <div
               onClick={() => setActiveMobilePanel(null)}
-              className="fixed inset-0 z-30 bg-slate-900/20"
+              className="fixed inset-0 z-30 bg-slate-900/30 backdrop-blur-sm"
             />
           )}
 
