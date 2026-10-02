@@ -1,5 +1,5 @@
 import { NextResponse } from 'next/server';
-import { fetchArtistPreview } from '@/lib/services/itunes';
+import { fetchArtistPreviews } from '@/lib/services/itunes';
 
 export async function GET(request: Request) {
   const { searchParams } = new URL(request.url);
@@ -10,6 +10,6 @@ export async function GET(request: Request) {
   }
 
   const genres = (searchParams.get('genres') || '').split(',').filter(Boolean);
-  const preview = await fetchArtistPreview(artist, genres);
-  return NextResponse.json(preview || null);
+  const previews = await fetchArtistPreviews(artist, genres);
+  return NextResponse.json(previews);
 }

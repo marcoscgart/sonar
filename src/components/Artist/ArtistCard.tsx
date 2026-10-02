@@ -15,6 +15,7 @@ import {
   X,
   Info,
   Play,
+  SkipForward,
   Plus,
   Minus
 } from 'lucide-react';
@@ -45,7 +46,17 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   // Id do artista cujos detalhes (gêneros/tags reais) já terminaram de carregar. A prévia espera
   // por isso: os gêneros da busca são provisórios e desambiguam mal artistas homônimos no iTunes.
   const [detailsLoadedFor, setDetailsLoadedFor] = useState<string | null>(null);
-  const [preview, setPreview] = useState<{ trackName: string; previewUrl: string } | null>(null);
+  const [previews, setPreviews] = useState<Array<{ trackName: string; previewUrl: string }>>([]);
+  const [trackIndex, setTrackIndex] = useState(0);
+  // Vira true quando o usuário já interagiu (próxima faixa ou fim de faixa): aí as faixas
+  // seguintes começam sozinhas. A 1ª nunca toca sem o usuário apertar play (política dos browsers).
+  const [autoplayNext, setAutoplayNext] = useState(false);
+  const preview = previews[trackIndex] ?? null;
+  const goToNextTrack = () => {
+    if (previews.length < 2) return;
+    setAutoplayNext(true);
+    setTrackIndex((i) => (i + 1) % previews.length);
+  };
 
   // Busca detalhes adicionais (discografia completa, foto e biografia) se ainda não foram carregados
   useEffect(() => {
@@ -86,12 +97,14 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   const detailsReady = !needsDetails || detailsLoadedFor === artist.id;
 
   useEffect(() => {
-    setPreview(null);
+    setPreviews([]);
+    setTrackIndex(0);
+    setAutoplayNext(false);
     if (!detailsReady) return;
     const hints = [...(fullArtist.genres || []), ...(fullArtist.tags || [])].slice(0, 8).join(',');
     fetch(`/api/preview?artist=${encodeURIComponent(artist.name)}&genres=${encodeURIComponent(hints)}`)
       .then((res) => res.json())
-      .then((data) => setPreview(data || null))
+      .then((data) => setPreviews(Array.isArray(data) ? data : []))
       .catch((err) => console.error('Failed to load artist preview:', err));
     // fullArtist só entra via detailsReady: não refaz (e troca a faixa) a cada atualização dele.
     // eslint-disable-next-line react-hooks/exhaustive-deps
@@ -232,7 +245,27 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-2 flex items-center">
             <Play className="w-3.5 h-3.5 mr-1.5 text-indigo-500" /> Prévia — {preview.trackName}
           </div>
-          <audio controls preload="none" className="w-full h-8" src={preview.previewUrl} />
+          <div className="flex items-center gap-2">
+            <audio
+              key={preview.previewUrl}
+              controls
+              preload="none"
+              className="w-full h-8"
+              src={preview.previewUrl}
+              autoPlay={autoplayNext}
+              onEnded={goToNextTrack}
+            />
+            {previews.length > 1 && (
+              <button
+                onClick={goToNextTrack}
+                title={`Próxima música (${trackIndex + 1}/${previews.length})`}
+                aria-label="Próxima música"
+                className="shrink-0 w-8 h-8 rounded-full bg-indigo-50 hover:bg-indigo-100 border border-indigo-200 text-indigo-600 flex items-center justify-center transition"
+              >
+                <SkipForward className="w-4 h-4" />
+              </button>
+            )}
+          </div>
         </div>
       )}
 
