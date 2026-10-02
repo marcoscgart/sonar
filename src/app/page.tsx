@@ -306,12 +306,18 @@ export default function HomePage() {
             />
           )}
 
-          {/* Componente de Busca */}
+          {/* Componente de Busca — ancorado pelo TOPO no mobile (não pelo rodapé como a Lista).
+              O campo de busca puxa o teclado, e o próprio Safari/Chrome mostra uma barra
+              compacta (endereço + sugestões) flutuando logo acima do teclado — se o painel
+              ficasse perto do rodapé (como antes, bottom-40), o campo acabava nessa mesma
+              faixa e ficava coberto/inacessível. Ancorando do topo, o campo sempre renderiza
+              logo abaixo do header, bem acima de onde o teclado (e a barra do navegador)
+              vão aparecer, não importa o tamanho do teclado do aparelho. */}
           <div
             ref={searchPanelRef}
             className={
               activeMobilePanel === 'search'
-                ? 'fixed inset-x-4 bottom-40 z-40 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96'
+                ? 'fixed inset-x-4 top-24 z-40 sm:absolute sm:inset-x-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96'
                 : 'hidden'
             }
           >
@@ -340,7 +346,7 @@ export default function HomePage() {
             ref={listPanelRef}
             className={
               activeMobilePanel === 'list'
-                ? 'fixed inset-x-4 bottom-40 z-40 max-h-[55dvh] overflow-y-auto sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96 sm:max-h-[60vh]'
+                ? 'fixed inset-x-4 bottom-24 z-40 max-h-[60dvh] overflow-y-auto sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96 sm:max-h-[60vh]'
                 : 'hidden'
             }
           >
@@ -490,12 +496,12 @@ export default function HomePage() {
         {/* Tab Bar Inferior — mobile only: unifica Busca e Lista em botões que abrem bottom
             sheets, + Perfil pra salvar, liberando o centro da tela pro grafo. A partir do sm:
             os painéis já ficam sempre visíveis do lado esquerdo e essa barra some.
-            Flutua a bottom-20 (em vez de grudar em bottom-0) pra não ficar atrás do badge
-            "Powered by Netlify" que a própria Netlify injeta (iframe de z-index máximo, fora
-            do nosso controle — não dá pra escondê-lo, só desviar). Vidro fosco escuro (padrão
+            Depois da migração Netlify → Vercel não existe mais o badge "Powered by Netlify"
+            (que exigia um offset grande, bottom-20, só pra desviar dele) — agora só precisa
+            de uma folga mínima acima da home indicator do iPhone. Vidro fosco escuro (padrão
             iOS) em vez de branco opaco: deixa o grafo transparecer por trás, combinando com o
             resto do tema escuro. */}
-        <div className="sm:hidden fixed bottom-20 inset-x-0 z-40 px-4">
+        <div className="sm:hidden fixed bottom-[max(1rem,env(safe-area-inset-bottom))] inset-x-0 z-40 px-4">
           <div className="bg-black/40 backdrop-blur-xl backdrop-saturate-150 rounded-3xl shadow-lg shadow-black/30 border border-white/10 flex items-stretch overflow-hidden">
             <button
               onClick={() => toggleMobilePanel('search')}
