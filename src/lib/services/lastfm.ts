@@ -37,20 +37,20 @@ export function isJunkArtist(name: string): boolean {
 const FALLBACK_SIMILARITIES: Record<string, SimilarArtist[]> = {
   radiohead: [
     { id: 'portishead', name: 'Portishead', mbid: '8f6bd1e4-fbe1-4f50-aa9b-94c450ec0f11', score: 0.88 },
-    { id: 'massive-attack', name: 'Massive Attack', mbid: 'e21743a7-be3e-461d-995b-07b14d23ff2e', score: 0.82 },
+    { id: 'massive-attack', name: 'Massive Attack', mbid: '10adbe5e-a2c0-4bf3-8249-2b4cbf6e6ca8', score: 0.82 },
     { id: 'bjork', name: 'Björk', mbid: '87c5dedd-371d-4a53-9f7f-80522fb7f3cb', score: 0.79 },
-    { id: 'muse', name: 'Muse', mbid: 'fd821bd8-ed41-417b-9398-0082e0788f9e', score: 0.85 },
+    { id: 'muse', name: 'Muse', mbid: '9c9f1380-2516-4fc9-a3e6-f9f61941d090', score: 0.85 },
     { id: 'the-smile', name: 'The Smile', score: 0.92 },
-    { id: 'thom-yorke', name: 'Thom Yorke', mbid: 'd2a3f789-d10a-4299-a864-4e2a86566444', score: 0.94 },
-    { id: 'doves', name: 'Doves', mbid: 'bc0b0d38-693d-4c80-8772-2d1264c71ef6', score: 0.73 },
-    { id: 'slowdive', name: 'Slowdive', mbid: 'f93d3953-b0e2-4523-be10-827d0c3ebc9c', score: 0.75 },
+    { id: 'thom-yorke', name: 'Thom Yorke', mbid: '8ed2e0b3-aa4c-4e13-bec3-dc7393ed4d6b', score: 0.94 },
+    { id: 'doves', name: 'Doves', mbid: '9de8f66e-3cd1-4f11-8328-38200f0612b0', score: 0.73 },
+    { id: 'slowdive', name: 'Slowdive', mbid: 'a16371b9-7d36-497a-a9d4-42b0a0440c5e', score: 0.75 },
   ],
   portishead: [
-    { id: 'massive-attack', name: 'Massive Attack', mbid: 'e21743a7-be3e-461d-995b-07b14d23ff2e', score: 0.91 },
-    { id: 'tricky', name: 'Tricky', mbid: '5b11f4ce-a62d-471e-81fc-a69a8278c7da', score: 0.87 },
+    { id: 'massive-attack', name: 'Massive Attack', mbid: '10adbe5e-a2c0-4bf3-8249-2b4cbf6e6ca8', score: 0.91 },
+    { id: 'tricky', name: 'Tricky', mbid: '5bf64d94-efd9-4334-96fd-e6197b0b02b8', score: 0.87 },
     { id: 'radiohead', name: 'Radiohead', mbid: 'a74b1b7f-71a5-4011-9441-d0b5e4122711', score: 0.88 },
     { id: 'bjork', name: 'Björk', mbid: '87c5dedd-371d-4a53-9f7f-80522fb7f3cb', score: 0.83 },
-    { id: 'morcheeba', name: 'Morcheeba', mbid: 'b4b1a457-3f30-4e2f-bb66-4e5a95574345', score: 0.81 },
+    { id: 'morcheeba', name: 'Morcheeba', mbid: '067102ea-9519-4622-9077-57ca4164cfbb', score: 0.81 },
   ],
   neurosis: [
     { id: 'isis', name: 'Isis', score: 0.95 },
