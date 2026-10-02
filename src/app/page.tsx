@@ -95,8 +95,9 @@ export default function HomePage() {
   const [whyThisCandidate, setWhyThisCandidate] = useState<DiscoveryCandidate | null>(null);
   const [isSaveModalOpen, setIsSaveModalOpen] = useState(false);
   const [mounted, setMounted] = useState(false);
-  // Tab bar mobile: qual painel (Busca/Lista) está aberto como bottom sheet. Sem efeito no
-  // desktop, que ignora esse estado e mantém os painéis sempre visíveis via classes sm:.
+  // Qual painel (Busca/Lista) está aberto via tab bar — no mobile como bottom sheet, no
+  // desktop como dropdown caindo logo abaixo da tab bar (mesmo estado, posicionamento
+  // diferente por breakpoint; ver as classes dos painéis mais abaixo).
   const [activeMobilePanel, setActiveMobilePanel] = useState<'search' | 'list' | null>(null);
 
   useEffect(() => {
@@ -188,17 +189,16 @@ export default function HomePage() {
     setActiveMobilePanel((current) => (current === panel ? null : panel));
   };
 
-  // Tab bar do desktop: painéis já ficam sempre visíveis lá (ao contrário do mobile), então
-  // Buscar/Lista não escondem/mostram nada — só focam o campo de busca ou rolam até a lista,
-  // como um atalho de conveniência. Perfil reaproveita o mesmo modal do botão "Salvar Perfil".
+  // Autofoca o campo de busca assim que o painel abre (toque na tab bar, mobile ou desktop) —
+  // tanto faz se foi um sheet subindo de baixo ou um dropdown caindo da tab bar, o usuário já
+  // quer digitar.
   const searchPanelRef = useRef<HTMLDivElement>(null);
   const listPanelRef = useRef<HTMLDivElement>(null);
-  const focusSearchInput = () => {
-    searchPanelRef.current?.querySelector('input')?.focus();
-  };
-  const scrollToListPanel = () => {
-    listPanelRef.current?.scrollIntoView({ behavior: 'smooth', block: 'nearest' });
-  };
+  useEffect(() => {
+    if (activeMobilePanel === 'search') {
+      searchPanelRef.current?.querySelector('input')?.focus();
+    }
+  }, [activeMobilePanel]);
 
   return (
     <main className="h-dvh relative bg-[#0b0e14] text-slate-900 font-sans selection:bg-indigo-500 selection:text-white overflow-hidden">
@@ -224,33 +224,50 @@ export default function HomePage() {
 
         {/* Header flutuante — sem fundo/borda própria, só o gradiente acima garante legibilidade.
             No mobile só sobra a logo, centralizada (justify-center com um único filho visível);
-            Limpar e Salvar Perfil migram pra tab bar inferior. A partir do sm: volta ao layout
-            de sempre (logo à esquerda, botões à direita). */}
-        <div className="absolute top-0 inset-x-0 z-30 px-4 lg:px-8 py-3.5 flex items-center justify-center sm:justify-between">
-          <div className="flex items-center sm:space-x-4">
+            a tab bar mobile fica lá embaixo (ver mais abaixo) e Limpar/Salvar Perfil somem daqui
+            (migram pra tab bar inferior). A partir do sm: logo e tab bar empilham no canto
+            superior esquerdo, botões de ação no canto superior direito (items-start porque essa
+            coluna da esquerda agora é mais alta que os botões). */}
+        <div className="absolute top-0 inset-x-0 z-30 px-4 lg:px-8 py-3.5 flex items-center sm:items-start justify-center sm:justify-between">
+          <div className="flex flex-col items-center sm:items-start gap-2">
             {/* Logo Oficial Sonar Multibeam */}
             <SonarLogo size="md" animated={true} showText={true} />
 
             {/* Tab bar compacta — versão desktop da tab bar mobile (mesmo vidro fosco "Apple"),
-                encostada na logo em vez de ocupar a largura toda: aqui os painéis de Busca e
-                Lista já ficam sempre visíveis, então os botões só focam/rolam até eles em vez
-                de abri-los. Perfil aciona o mesmo modal do botão "Salvar Perfil" ao lado. */}
+                empilhada logo abaixo da logo em vez de ocupar a largura toda. Busca/Lista abrem
+                como dropdown caindo daqui (mesmo estado activeMobilePanel do mobile, só a
+                posição do painel muda por breakpoint — ver painéis mais abaixo). Perfil ainda
+                não tem funcionalidade própria além de salvar (por isso o ícone fica acinzentado,
+                só de olho na organização visual) — aciona o mesmo modal do "Salvar Perfil". */}
             <div className="hidden sm:flex items-center gap-1 bg-black/40 backdrop-blur-xl backdrop-saturate-150 border border-white/10 rounded-full px-1.5 py-1.5 shadow-lg shadow-black/30">
               <button
-                onClick={focusSearchInput}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+                onClick={() => toggleMobilePanel('search')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                  activeMobilePanel === 'search' ? 'text-indigo-400 bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
               >
                 <Search className="w-3.5 h-3.5" /> Buscar
               </button>
               <button
-                onClick={scrollToListPanel}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+                onClick={() => toggleMobilePanel('list')}
+                className={`flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold transition ${
+                  activeMobilePanel === 'list' ? 'text-indigo-400 bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/10'
+                }`}
               >
-                <Music2 className="w-3.5 h-3.5" /> Lista
+                <div className="relative">
+                  <Music2 className="w-3.5 h-3.5" />
+                  {displaySeedArtists.length > 0 && (
+                    <span className="absolute -top-1.5 -right-2 min-w-[14px] h-3.5 px-1 rounded-full bg-red-500 text-white text-[8px] font-bold flex items-center justify-center">
+                      {displaySeedArtists.length}
+                    </span>
+                  )}
+                </div>
+                Lista
               </button>
               <button
                 onClick={() => setIsSaveModalOpen(true)}
-                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-300 hover:text-white hover:bg-white/10 transition"
+                title="Perfil (em construção)"
+                className="flex items-center gap-1.5 px-3 py-1.5 rounded-full text-xs font-semibold text-slate-600 hover:text-slate-400 transition"
               >
                 <User className="w-3.5 h-3.5" /> Perfil
               </button>
@@ -281,27 +298,29 @@ export default function HomePage() {
         </div>
 
         {/* Painéis Flutuantes (Busca & Seeds Selecionadas) */}
-        {/* No mobile os dois painéis viram bottom sheets, abertos por toque na tab bar inferior
-            (Buscar/Lista) — ficam escondidos por padrão, liberando a tela inteira pro grafo. A
-            partir do sm: o wrapper volta a ser o bloco flutuante único de sempre (empilhado no
-            canto superior esquerdo, sempre visível, ignorando o estado da tab bar). Top deslocado
-            pra baixo do header flutuante (que não empurra mais o layout, já que virou overlay). */}
-        <div className="contents sm:flex sm:flex-col sm:absolute sm:top-20 sm:left-4 lg:top-24 lg:left-6 sm:z-10 sm:w-96 sm:max-h-[calc(100%-5.5rem)] sm:space-y-4 lg:space-y-6 sm:overflow-y-auto">
+        {/* Ambos ficam escondidos por padrão e abrem por toque na tab bar (Buscar/Lista),
+            liberando a tela inteira pro grafo — comportamento igual em qualquer tamanho de
+            tela agora. No mobile sobem como bottom sheet; a partir do sm: caem como dropdown
+            ancorado logo abaixo da tab bar (canto superior esquerdo), não mais fixos/sempre
+            visíveis. Só um por vez (toggle), por isso não precisam mais empilhar com space-y. */}
+        <div className="contents">
 
-          {/* Backdrop mobile: toque fora fecha o sheet aberto */}
+          {/* Backdrop: toque fora fecha o painel aberto, em qualquer tamanho de tela */}
           {activeMobilePanel && (
             <div
               onClick={() => setActiveMobilePanel(null)}
-              className="fixed inset-0 z-30 bg-slate-900/20 sm:hidden"
+              className="fixed inset-0 z-30 bg-slate-900/20"
             />
           )}
 
           {/* Componente de Busca */}
           <div
             ref={searchPanelRef}
-            className={`${
-              activeMobilePanel === 'search' ? 'fixed inset-x-4 bottom-40 z-40' : 'hidden'
-            } sm:block sm:static sm:z-auto`}
+            className={
+              activeMobilePanel === 'search'
+                ? 'fixed inset-x-4 bottom-40 z-40 sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96'
+                : 'hidden'
+            }
           >
             {/* Fechar o sheet: fica FORA da área rolável do card (abaixo), sempre visível e
                 alcançável mesmo quando os resultados da busca crescem e ocupam a tela toda, ou
@@ -312,7 +331,7 @@ export default function HomePage() {
             >
               <X className="w-4 h-4" />
             </button>
-            <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] overflow-y-auto sm:max-h-none sm:overflow-visible">
+            <div className="bg-white p-5 rounded-3xl space-y-3 relative z-40 shrink-0 max-h-[55dvh] sm:max-h-[60vh] overflow-y-auto">
               <h2 className="text-sm font-bold text-slate-700 uppercase tracking-wider flex items-center">
                 <Search className="w-4 h-4 mr-1.5 text-indigo-500" /> Monte seu Perfil Musical
               </h2>
@@ -326,11 +345,11 @@ export default function HomePage() {
           {/* Seeds Selecionadas pelo Usuário */}
           <div
             ref={listPanelRef}
-            className={`${
+            className={
               activeMobilePanel === 'list'
-                ? 'fixed inset-x-4 bottom-40 z-40 max-h-[55dvh] overflow-y-auto'
+                ? 'fixed inset-x-4 bottom-40 z-40 max-h-[55dvh] overflow-y-auto sm:absolute sm:inset-x-auto sm:bottom-auto sm:top-36 sm:left-4 lg:left-6 sm:w-96 sm:max-h-[60vh]'
                 : 'hidden'
-            } sm:block sm:static sm:max-h-none sm:overflow-visible sm:z-auto`}
+            }
           >
           <div className="bg-white p-5 rounded-3xl flex flex-col shrink-0">
             <div>
