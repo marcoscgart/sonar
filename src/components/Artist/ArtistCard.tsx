@@ -1,6 +1,6 @@
 'use client';
 
-import React, { useState, useEffect } from 'react';
+import React, { useState, useEffect, useMemo } from 'react';
 import {
   Heart,
   ThumbsDown,
@@ -20,7 +20,7 @@ import {
   Minus
 } from 'lucide-react';
 import { Artist, ArtistStatus, DiscoveryCandidate } from '@/lib/types/sonar';
-import { formatCountryAndYear } from '@/lib/services/musicbrainz';
+import { formatCountryAndYear, generateEditorialSummary } from '@/lib/services/musicbrainz';
 
 // Converte o país do artista (sigla ISO "BR" ou nome por extenso "United Kingdom") na sigla de
 // 2 letras; devolve null se não reconhecer.
@@ -183,6 +183,29 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
     ? [countryCode, fullArtist.formed].filter(Boolean).join(', ')
     : formatCountryAndYear(fullArtist.country, fullArtist.formed);
 
+  // Síntese Editorial Automática: garante que 100% dos artistas tenham bio fluida e rica
+  const editorialBio = useMemo(() => {
+    if (fullArtist.bioSummary && fullArtist.bioSummary.trim().length > 0) {
+      return fullArtist.bioSummary;
+    }
+    const albums = fullArtist.discography || [];
+    return generateEditorialSummary({
+      name: fullArtist.name,
+      country: fullArtist.country,
+      formed: fullArtist.formed,
+      genres: fullArtist.genres,
+      tags: fullArtist.tags,
+      albumsCount: albums.length,
+      yearsSpan:
+        albums.length > 0
+          ? {
+              start: Math.min(...albums.map((a) => a.year)),
+              end: Math.max(...albums.map((a) => a.year)),
+            }
+          : undefined,
+    });
+  }, [fullArtist]);
+
   return (
     <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl shadow-2xl">
       {/* Botão Fechar se fornecido */}
@@ -305,14 +328,14 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
         </button>
       )}
 
-      {/* Biografia / Resumo da Banda */}
-      {fullArtist.bioSummary && (
+      {/* Biografia / Resumo da Banda (100% dos artistas garantidos via Síntese Editorial) */}
+      {editorialBio && (
         <div className="mb-4 bg-slate-50 p-3.5 rounded-2xl border border-slate-200 text-xs">
           <div className="text-[11px] font-bold text-slate-500 uppercase tracking-wider mb-1.5 flex items-center">
             <Info className="w-3.5 h-3.5 mr-1.5 text-indigo-500" /> Sobre o Artista
           </div>
           <p className="text-slate-600 leading-relaxed text-[11px] max-h-36 overflow-y-auto pr-1">
-            {fullArtist.bioSummary}
+            {editorialBio}
           </p>
         </div>
       )}

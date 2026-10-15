@@ -291,6 +291,93 @@ export async function fetchBandBio(
   return undefined;
 }
 
+export interface ArtistEditorialContext {
+  name: string;
+  type?: string | null;
+  country?: string | null;
+  formed?: number | null;
+  genres?: string[];
+  tags?: string[];
+  albumsCount?: number;
+  yearsSpan?: { start?: number | null; end?: number | null };
+  disambiguation?: string | null;
+}
+
+/**
+ * Traduz o código de país para português ou formata o nome com segurança
+ */
+export function formatCountryNamePt(countryStr?: string | null): string | null {
+  if (!countryStr) return null;
+  const raw = countryStr.trim();
+  try {
+    const regionNames = new Intl.DisplayNames(['pt-BR'], { type: 'region' });
+    if (/^[A-Za-z]{2}$/.test(raw)) {
+      const code = raw.toUpperCase() === 'UK' ? 'GB' : raw.toUpperCase();
+      const resolved = regionNames.of(code);
+      if (resolved && resolved !== code) return resolved;
+    }
+  } catch {
+    // fallback
+  }
+  return raw;
+}
+
+/**
+ * Síntese Editorial Automática:
+ * Gera uma descrição fluida, rica e profissional em português para qualquer artista,
+ * garantindo que 100% dos artistas no Sonar possuam apresentação no card "Sobre o Artista".
+ */
+export function generateEditorialSummary(ctx: ArtistEditorialContext): string {
+  const { name, type, country, formed, genres = [], tags = [], albumsCount = 0, yearsSpan, disambiguation } = ctx;
+
+  const isPerson = type?.toLowerCase() === 'person';
+  const entityDesc = isPerson ? 'artista e compositor(a)' : 'banda e projeto musical';
+
+  const cleanGenres = (genres.length > 0 ? genres : tags)
+    .filter((g) => g && g.trim().length > 1)
+    .slice(0, 3);
+  const genrePhrase = cleanGenres.length > 0 ? ` de ${cleanGenres.join(', ')}` : '';
+
+  const countryPt = formatCountryNamePt(country);
+  const originPhrase = countryPt ? `, originário(a) de ${countryPt}` : '';
+
+  const startYear = formed || yearsSpan?.start;
+  const activityPhrase = startYear ? `, em atividade desde ${startYear}` : '';
+
+  const sentences: string[] = [
+    `${name} é um(a) ${entityDesc}${genrePhrase}${originPhrase}${activityPhrase}.`,
+  ];
+
+  if (disambiguation && disambiguation.trim() && !disambiguation.toLowerCase().includes('disambiguation')) {
+    const cleanDisambig = disambiguation.trim();
+    if (!sentences[0].toLowerCase().includes(cleanDisambig.toLowerCase())) {
+      sentences.push(`No acervo musical, destaca-se como "${cleanDisambig}".`);
+    }
+  }
+
+  if (albumsCount > 0) {
+    if (yearsSpan?.start && yearsSpan?.end && yearsSpan.start !== yearsSpan.end) {
+      sentences.push(
+        `Possui uma discografia registrada com ${albumsCount} ${
+          albumsCount === 1 ? 'lançamento' : 'lançamentos'
+        } entre ${yearsSpan.start} e ${yearsSpan.end}, integrando o grafo de afinidades sonoras do Sonar.`
+      );
+    } else {
+      sentences.push(
+        `Possui ${albumsCount} ${
+          albumsCount === 1 ? 'lançamento catalogado' : 'lançamentos catalogados'
+        } no acervo, conectado às suas vertentes e recomendações musicais.`
+      );
+    }
+  } else {
+    sentences.push(
+      `Integra a malha de recomendações do Sonar através de conexões de afinidade sonora e exploração musical contínua.`
+    );
+  }
+
+  return sentences.join(' ');
+}
+
 /**
  * Normaliza país e ano para o formato aprovado no Sonar.txt:
  * ex: "United Kingdom, 1985" ou "United States, 1994"
@@ -559,6 +646,27 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
     // Aplica regra de consenso: tags comuns aos dois serviços vêm primeiro (limite de 5)
     const { tags: finalTags, commonTags } = mergeAndRankTags(sortedTags, lastfmTags, 5);
 
+    // Se não houver biografia remota (Wikipédia/Last.fm), sintetizamos um editorial fluente
+    const finalBio =
+      bio ||
+      generateEditorialSummary({
+        name: data.name,
+        type: data.type,
+        country: data.country,
+        formed: isNaN(formedYear!) ? null : formedYear,
+        genres: genres.length > 0 ? genres : finalTags.slice(0, 3),
+        tags: finalTags,
+        albumsCount: sortedAlbums.length,
+        yearsSpan:
+          sortedAlbums.length > 0
+            ? {
+                start: Math.min(...sortedAlbums.map((a) => a.year)),
+                end: Math.max(...sortedAlbums.map((a) => a.year)),
+              }
+            : undefined,
+        disambiguation: data.disambiguation,
+      });
+
     return {
       id: data.id,
       name: data.name,
@@ -572,7 +680,7 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
         musicbrainzId: data.id,
       },
       imageUrl: photoUrl,
-      bioSummary: bio || data.disambiguation || undefined,
+      bioSummary: finalBio,
     };
   } catch (error) {
     console.error('Error fetching MB artist details:', error);
@@ -640,14 +748,32 @@ export async function resolveAndGetArtistDetails(
       fetchArtistImage(cleanName),
       fetchBandBio(cleanName),
     ]);
+
+    const editorialBio =
+      bio ||
+      generateEditorialSummary({
+        name: cleanName,
+        country: hints?.country,
+        genres: hints?.genres,
+        tags: hints?.tags,
+        albumsCount: 0,
+      });
+
     return {
       name: cleanName,
       imageUrl: photoUrl,
-      bioSummary: bio,
+      bioSummary: editorialBio,
       discography: [],
     };
   } catch (err) {
-    return { name: cleanName, discography: [] };
+    const fallbackBio = generateEditorialSummary({
+      name: cleanName,
+      country: hints?.country,
+      genres: hints?.genres,
+      tags: hints?.tags,
+      albumsCount: 0,
+    });
+    return { name: cleanName, bioSummary: fallbackBio, discography: [] };
   }
 }
 
