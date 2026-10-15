@@ -96,14 +96,28 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
   useEffect(() => {
     setFullArtist(artist);
 
-    if (artist.identity.musicbrainzId && (artist.discography.length === 0 || !artist.bioSummary)) {
+    const directId =
+      artist.identity?.musicbrainzId || (artist.id?.startsWith('itunes-') ? artist.id : null);
+    const needsFetch = artist.discography.length === 0 || !artist.bioSummary;
+
+    if (needsFetch) {
       setIsLoadingDetails(true);
-      fetch(`/api/artists/${artist.identity.musicbrainzId}`)
+
+      const fetchUrl = directId
+        ? `/api/artists/${directId}`
+        : `/api/artists/resolve?name=${encodeURIComponent(artist.name)}${
+            artist.country ? `&country=${encodeURIComponent(artist.country)}` : ''
+          }${
+            artist.genres?.length ? `&genres=${encodeURIComponent(artist.genres.join(','))}` : ''
+          }`;
+
+      fetch(fetchUrl)
         .then((res) => res.json())
         .then((data) => {
-          if (data) {
+          if (data && (data.name || data.id)) {
             setFullArtist((prev) => ({
               ...prev,
+              name: data.name ?? prev.name,
               formed: data.formed ?? prev.formed,
               country: data.country ?? prev.country,
               genres: data.genres?.length ? data.genres : prev.genres,
@@ -112,6 +126,12 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
               discography: data.discography?.length ? data.discography : prev.discography,
               imageUrl: data.imageUrl ?? prev.imageUrl,
               bioSummary: data.bioSummary ?? prev.bioSummary,
+              identity: {
+                ...prev.identity,
+                musicbrainzId:
+                  data.identity?.musicbrainzId ??
+                  (data.id && !data.id.startsWith('itunes-') ? data.id : prev.identity?.musicbrainzId),
+              },
             }));
           }
         })
@@ -120,14 +140,15 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
           setIsLoadingDetails(false);
           setDetailsLoadedFor(artist.id);
         });
+    } else {
+      setDetailsLoadedFor(artist.id);
     }
   }, [artist]);
 
   // Busca uma prévia de 30s do artista (iTunes, sem necessidade de credenciais). Só dispara
   // quando os detalhes completos estão prontos (ou nunca foram necessários), pra usar os
   // gêneros reais na desambiguação.
-  const needsDetails =
-    !!artist.identity.musicbrainzId && (artist.discography.length === 0 || !artist.bioSummary);
+  const needsDetails = artist.discography.length === 0 || !artist.bioSummary;
   const detailsReady = !needsDetails || detailsLoadedFor === artist.id;
 
   useEffect(() => {
@@ -144,6 +165,18 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
     // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [artist.id, detailsReady]);
 
+  // Permite fechar com a tecla ESC no desktop
+  useEffect(() => {
+    if (!onClose) return;
+    const handleKeyDown = (e: KeyboardEvent) => {
+      if (e.key === 'Escape') {
+        onClose();
+      }
+    };
+    window.addEventListener('keydown', handleKeyDown);
+    return () => window.removeEventListener('keydown', handleKeyDown);
+  }, [onClose]);
+
   const countryCode = resolveCountryCode(fullArtist.country);
   // Com sigla reconhecida mostra "BR, 1985" (a bandeira vem antes, no JSX); senão mantém o texto original.
   const countryYearStr = countryCode
@@ -151,12 +184,18 @@ export const ArtistCard: React.FC<ArtistCardProps> = ({
     : formatCountryAndYear(fullArtist.country, fullArtist.formed);
 
   return (
-    <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl">
+    <div className="bg-white/95 border border-slate-200 rounded-3xl p-5 text-slate-900 max-w-md w-full relative overflow-hidden backdrop-blur-xl shadow-2xl">
       {/* Botão Fechar se fornecido */}
       {onClose && (
         <button
-          onClick={onClose}
-          className="absolute top-4 right-4 p-1.5 text-slate-400 hover:text-slate-700 hover:bg-slate-100 rounded-full transition z-10"
+          type="button"
+          onClick={(e) => {
+            e.stopPropagation();
+            onClose();
+          }}
+          className="absolute top-4 right-4 p-2 text-slate-400 hover:text-slate-800 hover:bg-slate-100 rounded-full transition z-20 cursor-pointer shadow-sm"
+          title="Fechar janela (Esc)"
+          aria-label="Fechar janela do artista"
         >
           <X className="w-5 h-5" />
         </button>

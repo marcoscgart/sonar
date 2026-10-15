@@ -579,3 +579,75 @@ export async function getMusicBrainzArtistDetails(mbid: string): Promise<Partial
     return {};
   }
 }
+
+/**
+ * Resolve a identidade e carrega os detalhes completos do artista sob demanda
+ * a partir do nome (usado para nós de descoberta do grafo ou buscas sem MBID inicial).
+ */
+export async function resolveAndGetArtistDetails(
+  name: string,
+  hints?: { country?: string | null; genres?: string[]; tags?: string[] }
+): Promise<Partial<Artist>> {
+  if (!name || !name.trim()) return {};
+  const cleanName = name.trim();
+
+  // 1. Tenta resolver o MBID exato pelo MusicBrainz
+  try {
+    const match = await resolveArtistMatch(cleanName, {
+      country: hints?.country,
+      genres: hints?.genres,
+      tags: hints?.tags,
+    });
+
+    if (match?.mbid) {
+      const details = await getMusicBrainzArtistDetails(match.mbid);
+      if (details && (details.discography?.length || details.bioSummary)) {
+        return details;
+      }
+    }
+  } catch (err) {
+    console.warn('Erro ao resolver por MusicBrainz match:', err);
+  }
+
+  // 2. Tenta busca geral no MusicBrainz / iTunes
+  try {
+    const searchResults = await searchMusicBrainzArtists(cleanName);
+    const topResult =
+      searchResults.find((a) => normalizeForCompare(a.name) === normalizeForCompare(cleanName)) ||
+      searchResults[0];
+
+    if (topResult) {
+      const idToFetch = topResult.identity?.musicbrainzId || topResult.id;
+      if (idToFetch) {
+        const details = await getMusicBrainzArtistDetails(idToFetch);
+        return {
+          ...topResult,
+          ...details,
+          identity: {
+            ...topResult.identity,
+            musicbrainzId: details.identity?.musicbrainzId || topResult.identity?.musicbrainzId,
+          },
+        };
+      }
+    }
+  } catch (err) {
+    console.warn('Erro na busca geral de detalhes:', err);
+  }
+
+  // 3. Fallback de biografia editorial e imagem diretamente pelo nome
+  try {
+    const [photoUrl, bio] = await Promise.all([
+      fetchArtistImage(cleanName),
+      fetchBandBio(cleanName),
+    ]);
+    return {
+      name: cleanName,
+      imageUrl: photoUrl,
+      bioSummary: bio,
+      discography: [],
+    };
+  } catch (err) {
+    return { name: cleanName, discography: [] };
+  }
+}
+

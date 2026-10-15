@@ -184,8 +184,9 @@ Tarefas já arquitetadas de sessões anteriores, ainda pendentes:
    - Convergir candidatos comuns a múltiplas sementes (ex: Cult of Luna) em um único nó com conexões compartilhadas.
 2. **Conexão Semente ↔ Semente via Tags**:
    - Traçar arestas diretas entre sementes que compartilham tags de consenso (ex: Neurosis ↔ Isis via *sludge metal* e *post-metal*).
-3. **Carregamento Universal ao Clique**:
-   - Ao clicar em qualquer nó do grafo Cytoscape (seja semente ou descoberta), resolver o MBID se necessário e carregar os dados completos (bio editorial, discografia reversa, capas e tags) no card de detalhes.
+3. ~~**Carregamento Universal ao Clique**~~ — **CONCLUÍDO**:
+   - Implementada resolução sob demanda em `src/lib/services/musicbrainz.ts` (`resolveAndGetArtistDetails`) e rota `GET /api/artists/resolve?name=...`.
+   - `ArtistCard.tsx` agora carrega biografia, discografia reversa completa e tags de consenso para qualquer artista — seja por MBID, por ID do iTunes (`itunes-...`) ou apenas pelo nome (nós de descoberta do grafo), eliminando o problema de bandas como Leprous ficarem vazias.
 
 Feito na sessão de 2026-09-25 (não repetir):
 - Layout flutuante (painéis sobre grafo em tela cheia, sem "caixa" no grafo); no mobile, busca e lista se separam (topo/rodapé) liberando o centro pro grafo.

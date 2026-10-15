@@ -283,8 +283,8 @@ export default function HomePage() {
             (migram pra tab bar inferior). A partir do sm: logo e tab bar empilham no canto
             superior esquerdo, botões de ação no canto superior direito (items-start porque essa
             coluna da esquerda agora é mais alta que os botões). */}
-        <div className="absolute top-0 inset-x-0 z-30 px-4 lg:px-8 py-3.5 flex items-center sm:items-start justify-center sm:justify-between">
-          <div className="flex flex-col items-center sm:items-start gap-2">
+        <div className="absolute top-0 inset-x-0 z-30 px-4 lg:px-8 py-3.5 flex items-center sm:items-start justify-center sm:justify-between pointer-events-none">
+          <div className="flex flex-col items-center sm:items-start gap-2 pointer-events-auto">
             {/* Logo Oficial Sonar Multibeam */}
             <SonarLogo size="md" animated={true} showText={true} />
 
@@ -336,7 +336,7 @@ export default function HomePage() {
             <button
               onClick={handleClearProfile}
               title="Limpar perfil temporário"
-              className="hidden sm:flex p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs items-center space-x-1"
+              className="hidden sm:flex p-2 text-slate-400 hover:text-rose-400 hover:bg-white/10 rounded-xl transition text-xs items-center space-x-1 pointer-events-auto"
             >
               <Trash2 className="w-4 h-4" />
               <span className="hidden sm:inline">Limpar</span>
@@ -602,7 +602,7 @@ export default function HomePage() {
 
         {/* Overlay com detalhes do artista selecionado — top deslocado pra não brigar com o header flutuante */}
         {selectedArtist && (
-          <div className="absolute top-20 right-4 z-20 max-w-sm w-[calc(100%-2rem)] sm:w-full max-h-[calc(100%-5.5rem)] overflow-y-auto animate-slide-in">
+          <div className="absolute top-20 right-4 z-50 max-w-sm w-[calc(100%-2rem)] sm:w-full max-h-[calc(100%-5.5rem)] overflow-y-auto animate-slide-in">
             <ArtistCard
               artist={selectedArtist}
               status={userArtists[selectedArtist.id]?.status}
